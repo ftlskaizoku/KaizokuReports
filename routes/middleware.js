@@ -1,30 +1,34 @@
 'use strict';
 
 const jwt = require('jsonwebtoken');
+const { getEAKey } = require('../services/settingsService');
 
 function authMiddleware(req, res, next) {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({ error: 'No token provided' });
-  }
-
+  const token = (req.headers['authorization'] || '').split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'No token provided' });
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+    req.user = jwt.verify(token, process.env.JWT_SECRET);
     next();
-  } catch (err) {
+  } catch {
     return res.status(403).json({ error: 'Invalid or expired token' });
   }
 }
 
-function eaAuthMiddleware(req, res, next) {
-  const key = req.headers['x-api-key'];
-  if (!key || key !== process.env.EA_API_KEY) {
-    return res.status(401).json({ error: 'Invalid EA API key' });
-  }
+function adminMiddleware(req, res, next) {
+  if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
   next();
 }
 
-module.exports = { authMiddleware, eaAuthMiddleware };
+async function eaAuthMiddleware(req, res, next) {
+  const key = req.headers['x-api-key'];
+  if (!key) return res.status(401).json({ error: 'Missing X-Api-Key header' });
+  try {
+    const validKey = await getEAKey();
+    if (key !== validKey) return res.status(401).json({ error: 'Invalid EA API key' });
+    next();
+  } catch (err) {
+    return res.status(500).json({ error: 'Auth check failed' });
+  }
+}
+
+module.exports = { authMiddleware, adminMiddleware, eaAuthMiddleware };

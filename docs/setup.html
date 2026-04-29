@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kaizoku Reports — First-Time Setup</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#080b0a;--sf:#0f1311;--sf2:#151a17;--bd:#1c2420;--bd2:#253029;
+  --tx:#dde8e2;--tx2:#7a9088;--tx3:#3d5049;
+  --go:#c9a84c;--go-bg:rgba(201,168,76,.08);--go-bd:rgba(201,168,76,.2);
+  --bu:#3ecf8e;--bu-d:#163d2a;--be:#e8534a;--be-d:#3d1a18;
+  --fh:'Syne',sans-serif;--fm:'IBM Plex Mono',monospace;--fb:'Instrument Sans',sans-serif;
+  --r:8px;--r2:12px;--r3:16px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{font-size:15px;}
+body{background:var(--bg);color:var(--tx);font-family:var(--fb);min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;}
+.card{width:100%;max-width:560px;background:var(--sf);border:1px solid var(--bd);border-radius:var(--r3);overflow:hidden;}
+.card-header{padding:24px 28px 20px;border-bottom:1px solid var(--bd);}
+.logo-row{display:flex;align-items:center;gap:12px;margin-bottom:6px;}
+.logo-mark{width:36px;height:36px;background:var(--go);border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:var(--fh);font-size:18px;font-weight:800;color:var(--bg);}
+.logo-name{font-family:var(--fh);font-size:19px;font-weight:700;color:var(--tx);}
+.logo-name em{color:var(--go);font-style:normal;}
+.header-sub{font-size:13px;color:var(--tx2);line-height:1.5;}
+.card-body{padding:24px 28px;}
+h3{font-family:var(--fh);font-size:14px;font-weight:700;color:var(--tx);margin-bottom:14px;}
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:14px;}
+.field label{font-family:var(--fm);font-size:10px;color:var(--tx2);text-transform:uppercase;letter-spacing:.7px;}
+.field input{background:var(--bg);border:1px solid var(--bd2);border-radius:var(--r);padding:10px 13px;font-size:13.5px;color:var(--tx);font-family:var(--fb);outline:none;transition:border-color .15s;}
+.field input:focus{border-color:var(--go);}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.divider{border:none;border-top:1px solid var(--bd);margin:20px 0;}
+.user-block{background:var(--sf2);border:1px solid var(--bd);border-radius:var(--r2);padding:14px 16px;margin-bottom:12px;}
+.user-block-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.user-num{font-family:var(--fm);font-size:10px;color:var(--go);background:var(--go-bg);border:1px solid var(--go-bd);border-radius:20px;padding:2px 10px;}
+.admin-badge{font-family:var(--fm);font-size:9.5px;color:var(--bu);background:var(--bu-d);border-radius:4px;padding:2px 8px;}
+.btn-primary{width:100%;background:var(--go);color:var(--bg);border:none;border-radius:var(--r);padding:13px;font-size:14px;font-weight:700;font-family:var(--fh);cursor:pointer;transition:opacity .15s;margin-top:4px;}
+.btn-primary:hover{opacity:.88;}
+.btn-primary:disabled{opacity:.45;cursor:not-allowed;}
+.result-box{border-radius:var(--r2);padding:14px 16px;margin-top:16px;display:none;}
+.result-box.success{background:var(--bu-d);border:1px solid rgba(62,207,142,.25);}
+.result-box.error{background:var(--be-d);border:1px solid rgba(232,83,74,.25);}
+.result-title{font-family:var(--fh);font-size:14px;font-weight:700;margin-bottom:6px;}
+.result-title.success{color:var(--bu);}
+.result-title.error{color:var(--be);}
+.result-body{font-size:12.5px;color:var(--tx2);line-height:1.7;}
+.result-body code{font-family:var(--fm);font-size:11.5px;color:var(--go);background:rgba(201,168,76,.08);padding:1px 5px;border-radius:3px;}
+.info-banner{background:rgba(201,168,76,.06);border:1px solid var(--go-bd);border-radius:var(--r2);padding:12px 14px;margin-bottom:20px;}
+.info-banner p{font-size:12.5px;color:var(--tx2);line-height:1.6;margin:0;}
+.info-banner strong{color:var(--go);}
+.step-badge{display:inline-block;font-family:var(--fm);font-size:9px;background:var(--go-bg);color:var(--go);border:1px solid var(--go-bd);border-radius:20px;padding:2px 8px;margin-bottom:10px;}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(8,11,10,.3);border-top-color:var(--bg);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="card-header">
+    <div class="logo-row">
+      <div class="logo-mark">K</div>
+      <div class="logo-name">Kaizoku <em>Reports</em></div>
+    </div>
+    <p class="header-sub">First-time account setup. Run this once to create all 4 user accounts. After setup, discard this file — it's no longer needed.</p>
+  </div>
+
+  <div class="card-body">
+
+    <!-- Step 1: Server config -->
+    <div class="step-badge">Step 1 — Server</div>
+    <div class="field">
+      <label>App URL (no trailing slash)</label>
+      <input type="url" id="app-url" placeholder="https://kaizokureports.up.railway.app" value="https://kaizokureports.up.railway.app">
+    </div>
+    <div class="field">
+      <label>EA API Key (must match Railway Variable EA_API_KEY)</label>
+      <input type="text" id="setup-key" placeholder="your-ea-api-key">
+    </div>
+
+    <hr class="divider">
+
+    <!-- Step 2: Users -->
+    <div class="step-badge">Step 2 — Create 4 Users</div>
+
+    <div class="info-banner">
+      <p><strong>User 1 is the Admin</strong> — they can manually trigger reports. The other 3 are regular users. All 4 can view reports, charts, and enable notifications.</p>
+    </div>
+
+    <!-- User 1 (Admin) -->
+    <div class="user-block">
+      <div class="user-block-head">
+        <span class="user-num">User 1</span>
+        <span class="admin-badge">Admin</span>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Username</label><input type="text" id="u1-name" placeholder="e.g. kaizoku" autocomplete="off"></div>
+        <div class="field"><label>Display Name</label><input type="text" id="u1-display" placeholder="e.g. Kaizoku" autocomplete="off"></div>
+      </div>
+      <div class="field"><label>Password (min 8 chars)</label><input type="password" id="u1-pass" placeholder="Choose a strong password" autocomplete="new-password"></div>
+    </div>
+
+    <!-- User 2 -->
+    <div class="user-block">
+      <div class="user-block-head"><span class="user-num">User 2</span></div>
+      <div class="field-row">
+        <div class="field"><label>Username</label><input type="text" id="u2-name" placeholder="e.g. friend1" autocomplete="off"></div>
+        <div class="field"><label>Display Name</label><input type="text" id="u2-display" placeholder="e.g. Friend 1" autocomplete="off"></div>
+      </div>
+      <div class="field"><label>Password</label><input type="password" id="u2-pass" placeholder="Password" autocomplete="new-password"></div>
+    </div>
+
+    <!-- User 3 -->
+    <div class="user-block">
+      <div class="user-block-head"><span class="user-num">User 3</span></div>
+      <div class="field-row">
+        <div class="field"><label>Username</label><input type="text" id="u3-name" placeholder="e.g. friend2" autocomplete="off"></div>
+        <div class="field"><label>Display Name</label><input type="text" id="u3-display" placeholder="e.g. Friend 2" autocomplete="off"></div>
+      </div>
+      <div class="field"><label>Password</label><input type="password" id="u3-pass" placeholder="Password" autocomplete="new-password"></div>
+    </div>
+
+    <!-- User 4 -->
+    <div class="user-block">
+      <div class="user-block-head"><span class="user-num">User 4</span></div>
+      <div class="field-row">
+        <div class="field"><label>Username</label><input type="text" id="u4-name" placeholder="e.g. friend3" autocomplete="off"></div>
+        <div class="field"><label>Display Name</label><input type="text" id="u4-display" placeholder="e.g. Friend 3" autocomplete="off"></div>
+      </div>
+      <div class="field"><label>Password</label><input type="password" id="u4-pass" placeholder="Password" autocomplete="new-password"></div>
+    </div>
+
+    <button class="btn-primary" id="setup-btn" onclick="runSetup()">Create All 4 Accounts</button>
+
+    <div class="result-box" id="result-box">
+      <div class="result-title" id="result-title"></div>
+      <div class="result-body" id="result-body"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+async function runSetup() {
+  const btn     = document.getElementById('setup-btn');
+  const box     = document.getElementById('result-box');
+  const title   = document.getElementById('result-title');
+  const body    = document.getElementById('result-body');
+
+  const appUrl  = document.getElementById('app-url').value.trim().replace(/\/$/, '');
+  const key     = document.getElementById('setup-key').value.trim();
+
+  // Collect users — skip empty slots
+  const users = [];
+  const slots = [
+    { n:'u1-name', d:'u1-display', p:'u1-pass', role:'admin' },
+    { n:'u2-name', d:'u2-display', p:'u2-pass', role:'user' },
+    { n:'u3-name', d:'u3-display', p:'u3-pass', role:'user' },
+    { n:'u4-name', d:'u4-display', p:'u4-pass', role:'user' },
+  ];
+
+  for (const s of slots) {
+    const name  = document.getElementById(s.n).value.trim();
+    const disp  = document.getElementById(s.d).value.trim();
+    const pass  = document.getElementById(s.p).value;
+    if (!name && !pass) continue; // skip blank slots
+    if (!name) { showError('Please fill in the username for all users you want to create.'); return; }
+    if (!pass || pass.length < 8) { showError(`Password for "${name}" must be at least 8 characters.`); return; }
+    users.push({ username: name, password: pass, display_name: disp || name, role: s.role });
+  }
+
+  if (!appUrl)        { showError('Please enter your app URL.'); return; }
+  if (!key)           { showError('Please enter your EA API Key (must match Railway EA_API_KEY variable).'); return; }
+  if (users.length === 0) { showError('Please fill in at least one user.'); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Creating accounts...';
+  box.style.display = 'none';
+
+  try {
+    const res = await fetch(`${appUrl}/api/auth/setup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ setup_key: key, users }),
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      showSuccess(data);
+    } else {
+      showError(data.error || `Server returned ${res.status}`);
+    }
+  } catch (err) {
+    if (err.message.includes('fetch') || err.message.includes('network')) {
+      showError(`Could not reach ${appUrl}. Check the URL and make sure the app is deployed and online.`);
+    } else {
+      showError(err.message);
+    }
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = 'Create All 4 Accounts';
+  }
+}
+
+function showSuccess(data) {
+  const box   = document.getElementById('result-box');
+  const title = document.getElementById('result-title');
+  const body  = document.getElementById('result-body');
+  box.className   = 'result-box success';
+  title.className = 'result-title success';
+  title.textContent = '✓ Accounts created successfully!';
+
+  const created = (data.users || []).map(u =>
+    `<div style="padding:4px 0;border-bottom:1px solid rgba(62,207,142,.12);display:flex;justify-content:space-between">
+      <span style="color:var(--tx)"><code>${u.username}</code></span>
+      <span>${u.display_name || u.username}</span>
+    </div>`
+  ).join('');
+
+  body.innerHTML = `
+    <div style="margin-bottom:12px">${created}</div>
+    <p style="margin-top:8px">✓ You can now log in at <code>${document.getElementById('app-url').value.trim()}</code></p>
+    <p style="margin-top:6px;color:var(--tx3)">This setup page is no longer needed. Close it and log in to the app directly.</p>`;
+
+  box.style.display = 'block';
+  box.scrollIntoView({ behavior: 'smooth' });
+}
+
+function showError(msg) {
+  const box   = document.getElementById('result-box');
+  const title = document.getElementById('result-title');
+  const body  = document.getElementById('result-body');
+  box.className   = 'result-box error';
+  title.className = 'result-title error';
+  title.textContent = '✗ Setup failed';
+  body.innerHTML  = `<p>${msg}</p>`;
+  box.style.display = 'block';
+  box.scrollIntoView({ behavior: 'smooth' });
+}
+
+// Auto-fill URL from address bar if running from live server
+const urlParam = new URLSearchParams(window.location.search).get('url');
+if (urlParam) document.getElementById('app-url').value = urlParam;
+</script>
+</body>
+</html>

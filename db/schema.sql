@@ -109,3 +109,10 @@ CREATE TABLE IF NOT EXISTS pattern_stats (
   updated_at            TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(symbol, candle_type, structure_context)
 );
+
+-- App settings (EA key, flags)
+CREATE TABLE IF NOT EXISTS app_settings (
+  key        TEXT PRIMARY KEY,
+  value      TEXT NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
