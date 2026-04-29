@@ -31,16 +31,16 @@ router.post('/users', async (req, res) => {
       return res.status(400).json({ error: 'Maximum 4 users reached.' });
     }
 
-    const { username, password, display_name, role } = req.body;
+    const { username, email, password, display_name, role } = req.body;
     if (!username || username.trim().length < 2) return res.status(400).json({ error: 'Username must be at least 2 characters.' });
     if (!password || password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters.' });
 
     const hash = await bcrypt.hash(password, 12);
     const r = await query(
-      `INSERT INTO users (username, password_hash, display_name, role)
-       VALUES ($1,$2,$3,$4)
-       RETURNING id, username, display_name, role`,
-      [username.toLowerCase().trim(), hash, display_name || username, role === 'admin' ? 'admin' : 'user']
+      `INSERT INTO users (username, email, password_hash, display_name, role)
+       VALUES ($1,$2,$3,$4,$5)
+       RETURNING id, username, email, display_name, role`,
+      [username.toLowerCase().trim(), email ? email.toLowerCase().trim() : null, hash, display_name || username, role === 'admin' ? 'admin' : 'user']
     );
     res.json({ message: 'User created.', user: r.rows[0] });
   } catch (err) {
@@ -72,7 +72,7 @@ router.patch('/users/:id', async (req, res) => {
     params.push(id);
     const r = await query(
       `UPDATE users SET ${updates.join(',')} WHERE id=$${idx}
-       RETURNING id, username, display_name, role`,
+       RETURNING id, username, email, display_name, role`,
       params
     );
     if (r.rows.length === 0) return res.status(404).json({ error: 'User not found.' });

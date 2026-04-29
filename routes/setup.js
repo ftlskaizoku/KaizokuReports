@@ -5,22 +5,23 @@ const bcrypt  = require('bcryptjs');
 const { query } = require('../db/db');
 const { isSetupRequired, getEAKey } = require('../services/settingsService');
 
-// GET /api/setup/status — is setup needed?
+// GET /api/setup/status
 router.get('/status', async (req, res) => {
   try {
     const needed = await isSetupRequired();
     res.json({ setup_required: needed });
   } catch (err) {
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: 'Server error.' });
   }
 });
 
-// POST /api/setup — create initial users (only works if no users exist)
+// POST /api/setup — create initial admin + optional extra users
+// Only works when zero users exist
 router.post('/', async (req, res) => {
   try {
     const needed = await isSetupRequired();
     if (!needed) {
-      return res.status(400).json({ error: 'Setup already complete. Manage users in the app Settings.' });
+      return res.status(400).json({ error: 'Setup already complete. Manage users in Admin Panel.' });
     }
 
     const { users } = req.body;
@@ -31,13 +32,14 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Maximum 4 users allowed.' });
     }
 
-    // Validate
-    for (const u of users) {
+    // Validate all entries
+    for (let i = 0; i < users.length; i++) {
+      const u = users[i];
       if (!u.username || u.username.trim().length < 2) {
-        return res.status(400).json({ error: 'All usernames must be at least 2 characters.' });
+        return res.status(400).json({ error: `User ${i+1}: username must be at least 2 characters.` });
       }
       if (!u.password || u.password.length < 8) {
-        return res.status(400).json({ error: `Password for "${u.username}" must be at least 8 characters.` });
+        return res.status(400).json({ error: `User ${i+1} ("${u.username}"): password must be at least 8 characters.` });
       }
     }
 
@@ -45,27 +47,23 @@ router.post('/', async (req, res) => {
     for (let i = 0; i < users.length; i++) {
       const u    = users[i];
       const hash = await bcrypt.hash(u.password, 12);
-      const role = i === 0 ? 'admin' : 'user'; // First user is always admin
-      const r    = await query(
-        `INSERT INTO users (username, password_hash, display_name, role)
-         VALUES ($1,$2,$3,$4)
-         RETURNING id, username, display_name, role`,
-        [u.username.toLowerCase().trim(), hash, u.display_name || u.username, role]
+      const role = i === 0 ? 'admin' : 'user'; // First user = admin
+      const email = u.email ? u.email.toLowerCase().trim() : null;
+
+      const r = await query(
+        `INSERT INTO users (username, email, password_hash, display_name, role)
+         VALUES ($1,$2,$3,$4,$5)
+         RETURNING id, username, email, display_name, role`,
+        [u.username.toLowerCase().trim(), email, hash, u.display_name || u.username, role]
       );
       created.push(r.rows[0]);
     }
 
-    // Get the auto-generated EA key to show the admin
     const eaKey = await getEAKey();
-
-    res.json({
-      message:  'Setup complete! You can now log in.',
-      users:    created,
-      ea_key:   eaKey,
-    });
+    res.json({ message: 'Setup complete. You can now log in.', users: created, ea_key: eaKey });
   } catch (err) {
     if (err.code === '23505') {
-      return res.status(400).json({ error: 'One of the usernames already exists.' });
+      return res.status(400).json({ error: 'A username or email is already taken.' });
     }
     console.error('Setup error:', err);
     res.status(500).json({ error: 'Server error during setup.' });

@@ -65,12 +65,13 @@ const App = (() => {
         const uname = document.getElementById(`su${i}-username`)?.value.trim();
         const pass  = document.getElementById(`su${i}-password`)?.value;
         const dname = document.getElementById(`su${i}-display`)?.value.trim();
+        const email = document.getElementById(`su${i}-email`)?.value.trim() || null;
         if (!uname && !pass) continue;
         if (!uname || !pass || pass.length < 8) {
           showSetupError(i === 1 ? 'Admin username and password (min 8 chars) are required.' : `Fill in both username and password for User ${i} (min 8 chars).`);
           btn.disabled = false; btn.textContent = 'Create Accounts & Launch'; return;
         }
-        users.push({ username: uname, password: pass, display_name: dname || uname });
+        users.push({ username: uname, password: pass, display_name: dname || uname, email });
       }
       if (users.length === 0) { showSetupError('Add at least one user.'); btn.disabled = false; btn.textContent = 'Create Accounts & Launch'; return; }
 
@@ -113,7 +114,7 @@ const App = (() => {
       errEl.style.display = 'none';
       try {
         const data = await api('/api/auth/login', 'POST', {
-          username: document.getElementById('username').value.trim(),
+          login: document.getElementById('login-field').value.trim(),
           password: document.getElementById('password').value,
         }, false);
         token = data.token; user = data.user;
@@ -461,8 +462,10 @@ const App = (() => {
   // ────────────────────────────────────────────────────────────
   function loadSettingsPage() {
     // Pre-fill profile form
+    const emailEl = document.getElementById('prof-email');
     const unameEl = document.getElementById('prof-username');
     const dnameEl = document.getElementById('prof-display');
+    if (emailEl) emailEl.value = user.email || '';
     if (unameEl) unameEl.value = user.username || '';
     if (dnameEl) dnameEl.value = user.display_name || '';
     updateNotifUI();
@@ -477,13 +480,15 @@ const App = (() => {
       profForm.addEventListener('submit', async e => {
         e.preventDefault();
         const msgEl    = document.getElementById('prof-msg');
+        const email    = document.getElementById('prof-email')?.value.trim();
         const username = document.getElementById('prof-username').value.trim();
         const display  = document.getElementById('prof-display').value.trim();
         msgEl.style.display = 'none';
         try {
-          const updated = await api('/api/auth/profile', 'PATCH', { username, display_name: display });
+          const updated = await api('/api/auth/profile', 'PATCH', { username, display_name: display, email: email || null });
           user.username     = updated.username;
           user.display_name = updated.display_name;
+          user.email        = updated.email;
           localStorage.setItem('km_user', JSON.stringify(user));
           document.getElementById('user-chip').textContent = user.display_name || user.username;
           showMsg('prof-msg', 'success', '✓ Profile updated.');

@@ -9,12 +9,19 @@ const compression = require('compression');
 const rateLimit   = require('express-rate-limit');
 const path        = require('path');
 
-const { initDb }        = require('./db/db');
+const { initDb }         = require('./db/db');
 const { startScheduler } = require('./services/scheduler');
-const { getEAKey }       = require('./services/settingsService');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
+
+// ═══ GUARD: DATABASE_URL must be set ═══
+if (!process.env.DATABASE_URL) {
+  console.error('\n❌ DATABASE_URL is not set.');
+  console.error('   In Railway: PostgreSQL plugin → Connect tab → copy DATABASE_URL');
+  console.error('   Then: KaizokuReports service → Variables → add DATABASE_URL\n');
+  process.exit(1);
+}
 
 // ═══ SECURITY ═══
 app.use(helmet({
@@ -38,7 +45,7 @@ app.use(express.json({ limit: '10mb' }));
 
 // ═══ RATE LIMITING ═══
 const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 500 });
-const eaLimiter  = rateLimit({ windowMs: 1  * 60 * 1000, max: 120 });
+const eaLimiter  = rateLimit({ windowMs:  1 * 60 * 1000, max: 120 });
 
 // ═══ ROUTES ═══
 app.use('/api/setup',   apiLimiter, require('./routes/setup'));
@@ -68,8 +75,18 @@ app.use((err, req, res, next) => {
 
 // ═══ STARTUP ═══
 async function start() {
-  await initDb();
-  await getEAKey(); // Ensure EA key exists in DB on every startup
+  // Init DB schema — this is the first real DB call
+  // If DATABASE_URL is wrong/missing this will throw a clear error
+  try {
+    await initDb();
+    console.log('✓ Database connected');
+  } catch (err) {
+    console.error('\n❌ Database connection failed:', err.message);
+    console.error('   Check DATABASE_URL in Railway Variables\n');
+    process.exit(1);
+  }
+
+  // EA key is generated lazily on first use — no startup call needed
   startScheduler();
 
   app.listen(PORT, () => {
@@ -79,4 +96,7 @@ async function start() {
   });
 }
 
-start().catch(err => { console.error('Fatal startup error:', err); process.exit(1); });
+start().catch(err => {
+  console.error('Fatal startup error:', err);
+  process.exit(1);
+});
