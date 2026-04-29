@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kaizoku Reports — Project Documentation</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@300;400;500;600&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #080b0a; --sf: #0f1311; --sf2: #141917; --sf3: #1a201d;
+  --bd: #1c2420; --bd2: #253029;
+  --tx: #dde8e2; --tx2: #7a9088; --tx3: #3d5049;
+  --go: #c9a84c; --go2: rgba(201,168,76,.12); --go3: rgba(201,168,76,.06);
+  --bu: #3ecf8e; --bu2: rgba(62,207,142,.12); --bu3: rgba(62,207,142,.06);
+  --be: #e8534a; --be2: rgba(232,83,74,.12);
+  --sw: #a78bfa; --sw2: rgba(167,139,250,.1); --sw3: rgba(167,139,250,.05);
+  --lo: #b48cff; --ny: #ff9d4d; --as: #4dc8ff;
+  --fh: 'Syne', sans-serif; --fm: 'IBM Plex Mono', monospace; --fb: 'Instrument Sans', sans-serif;
+  --r: 8px; --r2: 12px; --r3: 16px; --r4: 24px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 15px; scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--tx); font-family: var(--fb); line-height: 1.6; }
+
+/* ── LAYOUT ── */
+.shell { display: flex; min-height: 100vh; }
+
+/* ── SIDEBAR ── */
+.sidenav {
+  width: 260px; flex-shrink: 0;
+  background: var(--sf); border-right: 1px solid var(--bd);
+  position: fixed; top: 0; left: 0; bottom: 0;
+  overflow-y: auto; z-index: 100; transition: transform .25s;
+  display: flex; flex-direction: column;
+}
+.sidenav::-webkit-scrollbar { width: 4px; }
+.sidenav::-webkit-scrollbar-thumb { background: var(--bd2); border-radius: 2px; }
+.sn-header {
+  padding: 22px 18px 18px; border-bottom: 1px solid var(--bd);
+  flex-shrink: 0;
+}
+.sn-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.sn-mark {
+  width: 32px; height: 32px; background: var(--go); border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--fh); font-size: 15px; font-weight: 800; color: var(--bg); flex-shrink: 0;
+}
+.sn-title { font-family: var(--fh); font-size: 15px; font-weight: 700; color: var(--tx); }
+.sn-title em { color: var(--go); font-style: normal; }
+.sn-sub { font-family: var(--fm); font-size: 9px; color: var(--tx3); margin-top: 2px; }
+.sn-section { padding: 14px 12px 4px; }
+.sn-sec-label {
+  font-family: var(--fm); font-size: 9px; color: var(--tx3);
+  text-transform: uppercase; letter-spacing: 1.2px; padding: 0 6px 7px;
+}
+.sn-link {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border-radius: var(--r);
+  font-size: 12.5px; color: var(--tx2); cursor: pointer;
+  border: 1px solid transparent; margin-bottom: 1px;
+  transition: all .12s; user-select: none; text-decoration: none;
+}
+.sn-link:hover { background: var(--sf2); color: var(--tx); }
+.sn-link.active { background: var(--go3); color: var(--go); border-color: rgba(201,168,76,.18); }
+.sn-link .dot {
+  width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+  background: var(--tx3); transition: background .12s;
+}
+.sn-link.active .dot, .sn-link:hover .dot { background: var(--go); }
+.sn-link.sw { }
+.sn-link.sw:hover, .sn-link.sw.active { color: var(--sw); border-color: rgba(167,139,250,.2); background: var(--sw3); }
+.sn-link.sw.active .dot, .sn-link.sw:hover .dot { background: var(--sw); }
+.sn-link.bu:hover, .sn-link.bu.active { color: var(--bu); border-color: rgba(62,207,142,.2); background: var(--bu3); }
+.sn-link.bu.active .dot, .sn-link.bu:hover .dot { background: var(--bu); }
+.sn-footer { margin-top: auto; padding: 12px 14px; border-top: 1px solid var(--bd); flex-shrink: 0; }
+.sn-ver { font-family: var(--fm); font-size: 9.5px; color: var(--tx3); }
+
+/* ── TOPBAR ── */
+.topbar {
+  height: 54px; background: var(--sf); border-bottom: 1px solid var(--bd);
+  display: flex; align-items: center; padding: 0 24px; gap: 12px;
+  position: sticky; top: 0; z-index: 50; margin-left: 260px;
+}
+.hbtn { display: none; flex-direction: column; gap: 5px; padding: 6px; cursor: pointer; background: none; border: none; }
+.hbtn span { width: 18px; height: 2px; background: var(--tx2); border-radius: 2px; display: block; }
+.tb-pg { font-family: var(--fh); font-size: 15px; font-weight: 700; color: var(--tx); }
+.tb-sub { font-family: var(--fm); font-size: 10px; color: var(--tx3); display: block; margin-top: 1px; }
+.tb-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.tb-chip {
+  font-family: var(--fm); font-size: 10px; padding: 4px 10px;
+  background: var(--bg); border: 1px solid var(--bd); border-radius: var(--r); color: var(--tx2);
+}
+
+/* ── MAIN ── */
+.main { margin-left: 260px; flex: 1; }
+.content { padding: 32px 36px; max-width: 900px; }
+.section { display: none; }
+.section.active { display: block; }
+
+/* ── TYPOGRAPHY ── */
+h1 { font-family: var(--fh); font-size: 28px; font-weight: 800; color: var(--tx); line-height: 1.2; margin-bottom: 8px; }
+h1 em { color: var(--go); font-style: normal; }
+h2 { font-family: var(--fh); font-size: 21px; font-weight: 700; color: var(--tx); margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--bd); }
+h2 .tag { font-family: var(--fm); font-size: 9.5px; padding: 2px 8px; border-radius: 4px; margin-left: 8px; vertical-align: middle; }
+h2 .tag.go { background: var(--go2); color: var(--go); border: 1px solid rgba(201,168,76,.2); }
+h2 .tag.sw { background: var(--sw2); color: var(--sw); border: 1px solid rgba(167,139,250,.2); }
+h2 .tag.bu { background: var(--bu2); color: var(--bu); border: 1px solid rgba(62,207,142,.2); }
+h3 { font-family: var(--fh); font-size: 16px; font-weight: 700; color: var(--tx); margin-top: 24px; margin-bottom: 10px; }
+p { font-size: 14px; color: var(--tx2); margin-bottom: 14px; line-height: 1.8; }
+strong { color: var(--tx); font-weight: 600; }
+code { font-family: var(--fm); font-size: 12px; color: var(--go); background: var(--go2); padding: 2px 6px; border-radius: 4px; }
+.doc-meta { font-family: var(--fm); font-size: 10.5px; color: var(--tx3); margin-bottom: 28px; display: flex; gap: 16px; flex-wrap: wrap; }
+
+/* ── CALLOUT ── */
+.callout { border-radius: 0 var(--r2) var(--r2) 0; padding: 14px 18px; margin-bottom: 20px; border-left: 3px solid var(--go); background: var(--go3); }
+.callout.sw { border-left-color: var(--sw); background: var(--sw3); }
+.callout.bu { border-left-color: var(--bu); background: var(--bu3); }
+.callout.be { border-left-color: var(--be); background: var(--be2); }
+.callout p { margin-bottom: 0; font-size: 13px; }
+.callout-lbl { font-family: var(--fm); font-size: 9.5px; text-transform: uppercase; letter-spacing: .8px; margin-bottom: 5px; }
+.callout-lbl.go { color: var(--go); } .callout-lbl.sw { color: var(--sw); }
+.callout-lbl.bu { color: var(--bu); } .callout-lbl.be { color: var(--be); }
+
+/* ── FILE TREE ── */
+.file-tree {
+  background: var(--sf); border: 1px solid var(--bd); border-radius: var(--r3);
+  padding: 20px 22px; font-family: var(--fm); font-size: 12.5px;
+  margin-bottom: 20px; overflow-x: auto;
+}
+.ft-row { display: flex; align-items: center; gap: 8px; padding: 3px 0; cursor: pointer; border-radius: var(--r); transition: background .1s; }
+.ft-row:hover { background: var(--sf2); }
+.ft-row.folder { color: var(--go); font-weight: 500; }
+.ft-row.file { color: var(--tx2); }
+.ft-row.file:hover { color: var(--tx); }
+.ft-row .indent { flex-shrink: 0; }
+.ft-row .ft-icon { width: 14px; flex-shrink: 0; font-size: 11px; }
+.ft-row .ft-name { }
+.ft-row .ft-desc { margin-left: auto; font-size: 10.5px; color: var(--tx3); padding-left: 16px; text-align: right; }
+.ft-row.highlighted { background: var(--sw3); color: var(--sw); }
+.ft-row.highlighted .ft-desc { color: rgba(167,139,250,.6); }
+
+/* ── FLOW DIAGRAM ── */
+.flow-diagram {
+  background: var(--sf); border: 1px solid var(--bd); border-radius: var(--r3);
+  padding: 24px; margin-bottom: 20px; overflow-x: auto;
+}
+.flow-row { display: flex; align-items: center; gap: 4px; margin-bottom: 10px; flex-wrap: nowrap; }
+.fbox {
+  background: var(--sf2); border: 1px solid var(--bd2); border-radius: var(--r);
+  padding: 8px 14px; font-family: var(--fm); font-size: 11px;
+  color: var(--tx); white-space: nowrap; flex-shrink: 0; text-align: center;
+}
+.fbox small { display: block; font-size: 9px; color: var(--tx3); margin-top: 2px; }
+.fbox.go { border-color: rgba(201,168,76,.4); color: var(--go); background: var(--go3); }
+.fbox.bu { border-color: rgba(62,207,142,.3); color: var(--bu); background: var(--bu3); }
+.fbox.sw { border-color: rgba(167,139,250,.35); color: var(--sw); background: var(--sw3); border-width: 2px; }
+.fbox.lo { border-color: rgba(180,140,255,.3); color: var(--lo); background: rgba(180,140,255,.06); }
+.farr { color: var(--tx3); padding: 0 6px; font-size: 16px; flex-shrink: 0; }
+.farr.dn { transform: rotate(90deg); }
+
+/* ── TABLE ── */
+.doc-table-wrap { background: var(--sf); border: 1px solid var(--bd); border-radius: var(--r2); overflow: hidden; margin-bottom: 20px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th { padding: 9px 14px; text-align: left; font-family: var(--fm); font-size: 9.5px; color: var(--tx3); text-transform: uppercase; letter-spacing: .8px; background: var(--sf2); border-bottom: 1px solid var(--bd); white-space: nowrap; }
+tbody td { padding: 10px 14px; border-bottom: 1px solid var(--bd); color: var(--tx2); vertical-align: top; }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: var(--sf2); }
+tbody td:first-child { font-family: var(--fm); font-size: 11px; color: var(--go); }
+.td-method { font-family: var(--fm); font-size: 10px; padding: 2px 7px; border-radius: 4px; }
+.td-method.get { background: var(--bu2); color: var(--bu); }
+.td-method.post { background: var(--go2); color: var(--go); }
+
+/* ── SCHEDULE ── */
+.schedule-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 20px; }
+.sched-row {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--sf); border: 1px solid var(--bd);
+  border-radius: var(--r2); padding: 12px 16px;
+}
+.sched-time { font-family: var(--fm); font-size: 13px; font-weight: 600; color: var(--go); width: 80px; flex-shrink: 0; }
+.sched-job { font-size: 13px; color: var(--tx); flex: 1; }
+.sched-desc { font-size: 12px; color: var(--tx3); }
+
+/* ── STEP CARDS ── */
+.step-list { display: flex; flex-direction: column; gap: 0; margin-bottom: 20px; }
+.step-item {
+  display: flex; gap: 16px; padding: 16px 0;
+  border-bottom: 1px solid var(--bd);
+}
+.step-item:last-child { border-bottom: none; }
+.step-num {
+  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--fh); font-size: 14px; font-weight: 800;
+  background: var(--go2); border: 2px solid var(--go); color: var(--go);
+  margin-top: 2px;
+}
+.step-body h4 { font-family: var(--fh); font-size: 14px; font-weight: 700; color: var(--tx); margin-bottom: 4px; }
+.step-body p { font-size: 13px; color: var(--tx2); margin: 0; line-height: 1.6; }
+.step-body code { font-size: 11.5px; }
+
+/* ── CODE BLOCK ── */
+.code-block {
+  background: var(--sf); border: 1px solid var(--bd); border-radius: var(--r2);
+  padding: 16px 18px; font-family: var(--fm); font-size: 12px;
+  color: var(--tx2); white-space: pre; overflow-x: auto; margin-bottom: 16px;
+  line-height: 1.7;
+}
+.code-block .c-key { color: var(--sw); }
+.code-block .c-str { color: var(--bu); }
+.code-block .c-cmt { color: var(--tx3); }
+.code-block .c-go { color: var(--go); }
+
+/* ── FIX BOX ── */
+.fix-box {
+  background: rgba(62,207,142,.04); border: 2px solid rgba(62,207,142,.25);
+  border-radius: var(--r3); padding: 16px 20px; margin-bottom: 20px;
+}
+.fix-title { font-family: var(--fh); font-size: 14px; font-weight: 700; color: var(--bu); margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+.fix-title .badge { font-family: var(--fm); font-size: 9px; background: var(--bu2); padding: 2px 8px; border-radius: 4px; color: var(--bu); font-weight: 500; }
+
+/* ── EA SECTION ── */
+.ea-params { display: flex; flex-direction: column; gap: 7px; margin-bottom: 20px; }
+.ea-param {
+  display: flex; align-items: flex-start; gap: 12px;
+  background: var(--sf); border: 1px solid var(--bd);
+  border-radius: var(--r); padding: 10px 14px;
+}
+.ea-pname { font-family: var(--fm); font-size: 11px; color: var(--go); width: 160px; flex-shrink: 0; }
+.ea-pval { font-family: var(--fm); font-size: 11px; color: var(--sw); width: 180px; flex-shrink: 0; }
+.ea-pdesc { font-size: 12.5px; color: var(--tx2); }
+
+/* ── OVERLAY / MOBILE ── */
+.overlay { display: none; position: fixed; inset: 0; z-index: 90; background: rgba(0,0,0,.55); }
+.overlay.open { display: block; }
+
+@media(max-width: 860px) {
+  .sidenav { transform: translateX(-100%); }
+  .sidenav.open { transform: translateX(0); }
+  .main, .topbar { margin-left: 0; }
+  .hbtn { display: flex; }
+  .content { padding: 20px 16px; }
+}
+@media(max-width: 600px) {
+  .sched-row { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .sched-time { width: auto; }
+  table thead th:nth-child(n+4), table tbody td:nth-child(n+4) { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="overlay" id="overlay"></div>
+
+<div class="shell">
+
+<!-- ── SIDEBAR ── -->
+<nav class="sidenav" id="sidenav">
+  <div class="sn-header">
+    <div class="sn-logo">
+      <div class="sn-mark">K</div>
+      <div>
+        <div class="sn-title">Kaizoku <em>Reports</em></div>
+        <div class="sn-sub">Project Documentation</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sn-section">
+    <div class="sn-sec-label">Overview</div>
+    <a class="sn-link active" data-sec="overview"><div class="dot"></div>Project Overview</a>
+    <a class="sn-link" data-sec="fix"><div class="dot"></div>🔧 Deployment Fix</a>
+  </div>
+
+  <div class="sn-section">
+    <div class="sn-sec-label">Architecture</div>
+    <a class="sn-link" data-sec="structure"><div class="dot"></div>File Structure</a>
+    <a class="sn-link" data-sec="flow"><div class="dot"></div>Data Flow</a>
+    <a class="sn-link" data-sec="database"><div class="dot"></div>Database Schema</a>
+    <a class="sn-link" data-sec="schedule"><div class="dot"></div>Nightly Schedule</a>
+  </div>
+
+  <div class="sn-section">
+    <div class="sn-sec-label">Components</div>
+    <a class="sn-link sw" data-sec="ea"><div class="dot"></div>MT5 EA (Data Feeder)</a>
+    <a class="sn-link" data-sec="backend"><div class="dot"></div>Backend (Node.js)</a>
+    <a class="sn-link" data-sec="frontend"><div class="dot"></div>Frontend (PWA)</a>
+    <a class="sn-link" data-sec="api"><div class="dot"></div>API Reference</a>
+  </div>
+
+  <div class="sn-section">
+    <div class="sn-sec-label">Deployment</div>
+    <a class="sn-link bu" data-sec="deploy"><div class="dot"></div>Railway Deploy Guide</a>
+    <a class="sn-link" data-sec="envvars"><div class="dot"></div>Environment Variables</a>
+  </div>
+
+  <div class="sn-footer">
+    <div class="sn-ver">v1.0 · April 2026 · Railway + PostgreSQL</div>
+  </div>
+</nav>
+
+<!-- ── TOPBAR ── -->
+<header class="topbar">
+  <button class="hbtn" id="hbtn"><span></span><span></span><span></span></button>
+  <div>
+    <div class="tb-pg" id="tb-pg">Project Overview</div>
+    <span class="tb-sub" id="tb-sub">Kaizoku Reports Documentation</span>
+  </div>
+  <div class="tb-right">
+    <div class="tb-chip">UK100 · DE30 · XAUUSD · USOIL</div>
+  </div>
+</header>
+
+<!-- ── MAIN ── -->
+<div class="main">
+<div class="content">
+
+<!-- ═══ OVERVIEW ═══ -->
+<div class="section active" id="sec-overview">
+  <h1>Kaizoku <em>Reports</em></h1>
+  <div class="doc-meta">
+    <span>◉ Private · 4 users</span>
+    <span>⊙ D1 data only</span>
+    <span>◫ Railway + PostgreSQL</span>
+    <span>◈ PWA — mobile + desktop</span>
+  </div>
+
+  <div class="callout">
+    <div class="callout-lbl go">What This App Does</div>
+    <p>A private daily market intelligence app. The MT5 EA feeds D1 candlestick data from your broker for <strong>UK100, DE30, XAUUSD, and USOIL</strong>. The server classifies each candle every night, generates a written report with bias and key levels, and sends a push notification to all four users. Users can view charts and reports from any device — phone or desktop — through an installable PWA.</p>
+  </div>
+
+  <h3>What Each Part Does</h3>
+  <div class="step-list">
+    <div class="step-item">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h4>MT5 EA — Kaizoku_DataFeeder.mq5</h4>
+        <p>Runs inside MetaTrader 5 on your broker connection. Pushes historical D1 candles on first run, then sends each new closed daily candle automatically. Uses your Railway URL + API key to authenticate every request.</p>
+      </div>
+    </div>
+    <div class="step-item">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h4>Railway Server (Node.js + Express)</h4>
+        <p>Receives candle data from the EA, stores it in PostgreSQL. Every night at <code>22:15 UTC</code> it classifies candles, at <code>22:20</code> refreshes statistics, at <code>22:30</code> generates reports and fires push notifications.</p>
+      </div>
+    </div>
+    <div class="step-item">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h4>PWA Frontend</h4>
+        <p>Served by the same Node server. Installable on iPhone, Android, and desktop Chrome/Edge. Shows a candlestick chart page per symbol (using TradingView Lightweight Charts) and a Daily Reports page with candle classification, bias, key levels, and the written analysis.</p>
+      </div>
+    </div>
+    <div class="step-item">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <h4>Push Notifications</h4>
+        <p>After the report is generated each night, a Web Push notification is sent to every subscribed device. Tapping it opens the app straight to the report. Works on Android and desktop. Safari/iOS requires iOS 16.4+ with the app installed to home screen.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ FIX ═══ -->
+<div class="section" id="sec-fix">
+  <h2>🔧 Deployment Fix <span class="tag bu">APPLIED</span></h2>
+
+  <div class="fix-box">
+    <div class="fix-title">✓ Fix Applied — Server Will Now Start <div class="badge">pushNotifications.js</div></div>
+    <p style="font-size:13px;color:var(--tx2);margin-top:6px;line-height:1.7">The crash was caused by <code>web-push</code> throwing an error at module load time because <strong>VAPID_EMAIL</strong> was not yet set in Railway Variables. The fix moves VAPID configuration to a lazy initialiser — it only runs when push notifications are first used, not at startup. The server now starts cleanly even if VAPID keys are missing.</p>
+  </div>
+
+  <h3>What the log said</h3>
+  <div class="code-block"><span class="c-cmt">// Error at line 7 of pushNotifications.js:</span>
+<span class="c-be" style="color:var(--be)">Error: No subject set in vapidDetails.subject.</span>
+    at Object.validateSubject (web-push/src/vapid-helper.js:70)
+    at Object.&lt;anonymous&gt; (services/pushNotifications.js:7)
+<span class="c-cmt">
+// Root cause:
+// webpush.setVapidDetails() was called immediately at module load.
+// If VAPID_EMAIL is not set, web-push throws and crashes the whole process.</span></div>
+
+  <h3>What was changed</h3>
+  <div class="code-block"><span class="c-cmt">// BEFORE — crashes on startup if env vars not set</span>
+<span class="c-key">webpush</span>.setVapidDetails(
+  process.env.VAPID_EMAIL,      <span class="c-cmt">// throws if undefined</span>
+  process.env.VAPID_PUBLIC_KEY,
+  process.env.VAPID_PRIVATE_KEY
+);
+
+<span class="c-cmt">// AFTER — lazy init, only runs when actually sending a notification</span>
+<span class="c-key">function</span> <span class="c-go">ensureVapid</span>() {
+  <span class="c-key">if</span> (vapidConfigured) <span class="c-key">return true</span>;
+  <span class="c-key">const</span> { VAPID_EMAIL, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY } = process.env;
+  <span class="c-key">if</span> (!VAPID_EMAIL || !VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+    console.warn(<span class="c-str">'VAPID keys not set — push disabled until configured.'</span>);
+    <span class="c-key">return false</span>;   <span class="c-cmt">// server keeps running fine</span>
+  }
+  webpush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+  vapidConfigured = <span class="c-key">true</span>;
+  <span class="c-key">return true</span>;
+}</div>
+
+  <div class="callout sw">
+    <div class="callout-lbl sw">Push notifications still work</div>
+    <p>VAPID is still fully functional — it configures itself the first time a notification is actually sent. Just add the three VAPID variables to Railway and push will work on the next report cycle.</p>
+  </div>
+
+  <h3>Generating VAPID keys (one-time)</h3>
+  <div class="code-block"><span class="c-cmt"># Run this once locally in your project folder</span>
+<span class="c-go">node</span> -e <span class="c-str">"const wp=require('web-push');
+const k=wp.generateVAPIDKeys();
+console.log('VAPID_PUBLIC_KEY='+k.publicKey);
+console.log('VAPID_PRIVATE_KEY='+k.privateKey);"</span>
+
+<span class="c-cmt"># Then paste the output into Railway → Variables</span></div>
+</div>
+
+<!-- ═══ STRUCTURE ═══ -->
+<div class="section" id="sec-structure">
+  <h2>File Structure</h2>
+  <p>All 23 files in the project. Click any file to highlight it.</p>
+
+  <div class="file-tree" id="file-tree">
+    <!-- populated by JS -->
+  </div>
+</div>
+
+<!-- ═══ FLOW ═══ -->
+<div class="section" id="sec-flow">
+  <h2>Data Flow</h2>
+  <p>How data moves from the broker through to the user's device.</p>
+
+  <div class="flow-diagram">
+    <div style="font-family:var(--fm);font-size:9px;color:var(--tx3);text-transform:uppercase;letter-spacing:.9px;margin-bottom:18px">Full System Flow</div>
+
+    <div class="flow-row">
+      <div class="fbox go">MT5 EA<small>Kaizoku_DataFeeder.mq5</small></div>
+      <div class="farr">→</div>
+      <div class="fbox go">POST /api/ea/push<small>D1 OHLCV · X-Api-Key auth</small></div>
+      <div class="farr">→</div>
+      <div class="fbox">candles table<small>PostgreSQL · Railway</small></div>
+    </div>
+
+    <div style="padding-left:40px;border-left:1px dashed var(--bd2);margin:10px 0 10px 40px">
+      <div class="flow-row" style="margin-bottom:8px">
+        <div class="fbox bu">Classification Job<small>22:15 UTC nightly</small></div>
+        <div class="farr">→</div>
+        <div class="fbox bu">candle_analysis<small>Pattern + bias + structure</small></div>
+        <div class="farr">→</div>
+        <div class="fbox bu">pattern_stats<small>22:20 · aggregated</small></div>
+      </div>
+      <div class="flow-row">
+        <div class="fbox bu">Report Generator<small>22:30 UTC</small></div>
+        <div class="farr">→</div>
+        <div class="fbox bu">daily_reports<small>Text + levels + bias</small></div>
+        <div class="farr">→</div>
+        <div class="fbox sw">Web Push<small>All subscribed devices</small></div>
+      </div>
+    </div>
+
+    <div class="flow-row">
+      <div class="fbox lo">User opens app<small>PWA — phone or desktop</small></div>
+      <div class="farr">→</div>
+      <div class="fbox lo">Reports Page<small>GET /api/reports/latest</small></div>
+      <div class="farr">+</div>
+      <div class="fbox lo">Chart Page<small>GET /api/candles/:symbol</small></div>
+    </div>
+  </div>
+
+  <h3>EA Push Format</h3>
+  <p>The EA sends candles as a JSON array. The server accepts 1 to 5,000 candles per request:</p>
+  <div class="code-block">[
+  {
+    <span class="c-str">"symbol"</span>: <span class="c-str">"DE30"</span>,
+    <span class="c-str">"date"</span>:   <span class="c-str">"2025-04-24"</span>,
+    <span class="c-str">"open"</span>:   <span class="c-go">24038.0</span>,
+    <span class="c-str">"high"</span>:   <span class="c-go">24055.8</span>,
+    <span class="c-str">"low"</span>:    <span class="c-go">24006.1</span>,
+    <span class="c-str">"close"</span>:  <span class="c-go">24023.8</span>,
+    <span class="c-str">"volume"</span>: <span class="c-go">12345</span>
+  },
+  <span class="c-cmt">// ... more candles</span>
+]</div>
+</div>
+
+<!-- ═══ DATABASE ═══ -->
+<div class="section" id="sec-database">
+  <h2>Database Schema</h2>
+  <p>Five tables in PostgreSQL. Created automatically on first startup via <code>db/schema.sql</code>.</p>
+
+  <h3>candles — core raw data</h3>
+  <div class="doc-table-wrap">
+    <table>
+      <thead><tr><th>Column</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>symbol</td><td>TEXT</td><td>UK100, DE30, XAUUSD, USOIL</td></tr>
+        <tr><td>candle_date</td><td>DATE</td><td>Unique per symbol+date</td></tr>
+        <tr><td>open / high / low / close</td><td>NUMERIC</td><td>Raw OHLC prices</td></tr>
+        <tr><td>volume</td><td>BIGINT</td><td>Tick volume</td></tr>
+        <tr><td>body_high / body_low</td><td>GENERATED</td><td>MAX/MIN of open,close — auto-computed</td></tr>
+        <tr><td>direction</td><td>GENERATED</td><td>bullish / bearish / neutral — auto-computed</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>candle_analysis — nightly classification</h3>
+  <div class="doc-table-wrap">
+    <table>
+      <thead><tr><th>Column</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>candle_type</td><td>TEXT</td><td>strong_bullish, pin_bar, doji, engulfing, etc.</td></tr>
+        <tr><td>structure_label</td><td>TEXT</td><td>uptrend / downtrend / ranging (from last 20 bars)</td></tr>
+        <tr><td>d1_bias</td><td>TEXT</td><td>bullish / bearish / neutral</td></tr>
+        <tr><td>bias_confidence</td><td>NUMERIC</td><td>Probability % based on historical stats</td></tr>
+        <tr><td>body_pct / wick_pcts</td><td>NUMERIC</td><td>Candle proportions as % of range</td></tr>
+        <tr><td>next_day_direction</td><td>TEXT</td><td>Filled next session — what actually happened</td></tr>
+        <tr><td>outcome_type</td><td>TEXT</td><td>continuation / reversal / pullback / consolidation</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>daily_reports / pattern_stats / users / push_subscriptions</h3>
+  <p><strong>daily_reports</strong> — one report row per symbol per day with full narrative text, key levels JSON, and bias. <strong>pattern_stats</strong> — aggregated win rates per pattern type, rebuilt nightly. <strong>users</strong> — the 4 accounts with hashed passwords. <strong>push_subscriptions</strong> — one row per subscribed browser/device per user.</p>
+</div>
+
+<!-- ═══ SCHEDULE ═══ -->
+<div class="section" id="sec-schedule">
+  <h2>Nightly Schedule</h2>
+  <p>Four jobs run automatically Monday–Friday via <code>node-cron</code>. All times UTC.</p>
+
+  <div class="schedule-list">
+    <div class="sched-row">
+      <div class="sched-time">22:00</div>
+      <div>
+        <div class="sched-job">D1 candles close (broker time)</div>
+        <div class="sched-desc">The EA detects the new bar and immediately pushes the closed candle to /api/ea/push</div>
+      </div>
+    </div>
+    <div class="sched-row">
+      <div class="sched-time">22:15</div>
+      <div>
+        <div class="sched-job">Candle Classification Job</div>
+        <div class="sched-desc">Classifies latest D1 bar for all 4 symbols · Updates yesterday's outcome · Writes to candle_analysis</div>
+      </div>
+    </div>
+    <div class="sched-row">
+      <div class="sched-time">22:20</div>
+      <div>
+        <div class="sched-job">Pattern Stats Refresh</div>
+        <div class="sched-desc">Aggregates all candle_analysis history into pattern_stats — win rates, outcome percentages</div>
+      </div>
+    </div>
+    <div class="sched-row">
+      <div class="sched-time">22:30</div>
+      <div>
+        <div class="sched-job">Report Generation + Push Notifications</div>
+        <div class="sched-desc">Builds written report for each symbol · Upserts into daily_reports · Sends Web Push to all devices</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <div class="callout-lbl go">Broker timezone note</div>
+    <p>Some brokers close D1 at 22:00 UTC, others at 23:00 or 00:00. If your broker uses a different close time, adjust the cron times in <code>services/scheduler.js</code>. The cron strings follow standard syntax: <code>'15 22 * * 1-5'</code> = 22:15 UTC Monday–Friday.</p>
+  </div>
+</div>
+
+<!-- ═══ EA ═══ -->
+<div class="section" id="sec-ea">
+  <h2>MT5 EA — Kaizoku_DataFeeder.mq5 <span class="tag sw">NEW FILE</span></h2>
+
+  <div class="callout sw">
+    <div class="callout-lbl sw">The EA is now included</div>
+    <p>The file <code>ea/Kaizoku_DataFeeder.mq5</code> is in the project zip. Copy it to your MT5 <code>MQL5/Experts/</code> folder, compile it, and attach it to any chart. It runs independently of the chart symbol/timeframe.</p>
+  </div>
+
+  <h3>EA Input Parameters</h3>
+  <div class="ea-params">
+    <div class="ea-param">
+      <div class="ea-pname">InpServerURL</div>
+      <div class="ea-pval">https://your-app.railway.app</div>
+      <div class="ea-pdesc">Your Railway deployment URL — no trailing slash</div>
+    </div>
+    <div class="ea-param">
+      <div class="ea-pname">InpApiKey</div>
+      <div class="ea-pval">your-ea-api-key</div>
+      <div class="ea-pdesc">Must match <code>EA_API_KEY</code> in Railway Variables exactly</div>
+    </div>
+    <div class="ea-param">
+      <div class="ea-pname">InpHistoryDays</div>
+      <div class="ea-pval">1000</div>
+      <div class="ea-pdesc">Days of D1 history to backfill on first run. 1000 ≈ 4 years. Set higher for more history.</div>
+    </div>
+    <div class="ea-param">
+      <div class="ea-pname">InpSyncInterval</div>
+      <div class="ea-pval">3600</div>
+      <div class="ea-pdesc">Regular resync interval in seconds (default 1 hour). The EA also triggers on each new D1 bar.</div>
+    </div>
+    <div class="ea-param">
+      <div class="ea-pname">InpSymbol1–4</div>
+      <div class="ea-pval">UK100, DE30, XAUUSD, USOIL</div>
+      <div class="ea-pdesc">Exact broker symbol names. If DE30 doesn't exist on your broker, try GER30, GER40, DAX40. For USOIL try WTI, OIL, USOIL+.</div>
+    </div>
+  </div>
+
+  <h3>MT5 Setup — IMPORTANT</h3>
+  <p>MT5 blocks all internet requests by default. You must whitelist the Railway URL:</p>
+  <div class="step-list">
+    <div class="step-item">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h4>Allow WebRequest in MT5</h4>
+        <p>Go to <strong>Tools → Options → Expert Advisors</strong>. Check <em>"Allow WebRequest for listed URL"</em>. Add: <code>https://your-app.railway.app</code></p>
+      </div>
+    </div>
+    <div class="step-item">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h4>Compile the EA</h4>
+        <p>Copy <code>Kaizoku_DataFeeder.mq5</code> to <code>%APPDATA%/MetaQuotes/Terminal/[ID]/MQL5/Experts/</code>. In MT5 Navigator panel, right-click → Compile. Green checkmark = success.</p>
+      </div>
+    </div>
+    <div class="step-item">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h4>Attach to any chart</h4>
+        <p>Drag the EA onto any chart. Set <code>InpServerURL</code> and <code>InpApiKey</code> in the inputs. Enable <em>"Allow live trading"</em>. The EA runs independently of the chart's symbol.</p>
+      </div>
+    </div>
+    <div class="step-item">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <h4>Verify connection</h4>
+        <p>Check the Experts log tab in MT5 — you should see <em>"Server connection OK"</em> and <em>"History backfill complete"</em>. Then verify on Railway: <code>GET /api/ea/status</code> returns symbol counts.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ BACKEND ═══ -->
+<div class="section" id="sec-backend">
+  <h2>Backend (Node.js + Express)</h2>
+
+  <h3>Services</h3>
+  <div class="doc-table-wrap">
+    <table>
+      <thead><tr><th>File</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td>candleClassifier.js</td><td>Identifies 14 candle patterns, derives structure label (uptrend/downtrend/ranging), assigns daily bias and confidence %</td></tr>
+        <tr><td>reportGenerator.js</td><td>Builds the full narrative report text per symbol — uses candle type + historical stats + key levels</td></tr>
+        <tr><td>scheduler.js</td><td>Runs the four nightly cron jobs (classify → stats → report → push) using node-cron</td></tr>
+        <tr><td>pushNotifications.js</td><td>Lazy VAPID init, stores subscriptions, sends Web Push to all devices after report generation</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>14 Candle Patterns Recognised</h3>
+  <div class="doc-table-wrap">
+    <table>
+      <thead><tr><th>Pattern</th><th>Rule</th><th>Default Bias</th></tr></thead>
+      <tbody>
+        <tr><td>strong_bullish</td><td>Body &gt;70% of range, close in top 30%</td><td>Bullish 72%</td></tr>
+        <tr><td>strong_bearish</td><td>Body &gt;70% of range, close in bottom 30%</td><td>Bearish 72%</td></tr>
+        <tr><td>bullish_pin_bar</td><td>Lower wick &gt;60% of range, close &gt;50%</td><td>Bullish 68%</td></tr>
+        <tr><td>bearish_pin_bar</td><td>Upper wick &gt;60% of range, close &lt;50%</td><td>Bearish 65%</td></tr>
+        <tr><td>hammer</td><td>Small body upper half, long lower wick, bullish close</td><td>Bullish 61%</td></tr>
+        <tr><td>shooting_star</td><td>Small body lower half, long upper wick, bearish close</td><td>Bearish 60%</td></tr>
+        <tr><td>bullish_engulfing</td><td>Current bull body engulfs previous bear body</td><td>Bullish 64%</td></tr>
+        <tr><td>bearish_engulfing</td><td>Current bear body engulfs previous bull body</td><td>Bearish 66%</td></tr>
+        <tr><td>inside_bar</td><td>Full range within previous candle's range</td><td>Neutral 54%</td></tr>
+        <tr><td>outside_bar</td><td>Current range engulfs previous candle</td><td>Neutral 52%</td></tr>
+        <tr><td>doji</td><td>Body &lt;5% of range</td><td>Neutral 49%</td></tr>
+        <tr><td>spinning_top</td><td>Body 5–20%, large equal wicks on both sides</td><td>Neutral 49%</td></tr>
+        <tr><td>moderate_bullish</td><td>Body 40–70%, bullish direction</td><td>Bullish 57%</td></tr>
+        <tr><td>moderate_bearish</td><td>Body 40–70%, bearish direction</td><td>Bearish 57%</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══ FRONTEND ═══ -->
+<div class="section" id="sec-frontend">
+  <h2>Frontend (PWA)</h2>
+
+  <h3>Pages</h3>
+  <div class="doc-table-wrap">
+    <table>
+      <thead><tr><th>Page</th><th>Route</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>Login</td><td>/</td><td>Simple username + password. JWT stored in localStorage for 30 days.</td></tr>
+        <tr><td>Daily Reports</td><td>/ (after login)</td><td>Cards for all 4 symbols — candle visual, OHLC, bias, key levels, written analysis.</td></tr>
+        <tr><td>Charts — UK100</td><td>/chart-UK100</td><td>Full candlestick chart with 1M/3M/6M/1Y/2Y/ALL range buttons.</td></tr>
+        <tr><td>Charts — DE30</td><td>/chart-DE30</td><td>Same as above for DAX.</td></tr>
+        <tr><td>Charts — XAUUSD</td><td>/chart-XAUUSD</td><td>Gold candlestick chart.</td></tr>
+        <tr><td>Charts — USOIL</td><td>/chart-USOIL</td><td>US Crude candlestick chart.</td></tr>
+        <tr><td>Settings</td><td>/settings</td><td>Enable/disable notifications · Change password · Data status · Install PWA button.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Installing the PWA</h3>
+  <div class="step-list">
+    <div class="step-item">
+      <div class="step-num" style="background:var(--sw2);border-color:var(--sw);color:var(--sw)">A</div>
+      <div class="step-body">
+        <h4>Android (Chrome)</h4>
+        <p>Open the app URL in Chrome → tap the 3-dot menu → <em>"Add to Home screen"</em>. Or look for the install banner at the bottom of the browser.</p>
+      </div>
+    </div>
+    <div class="step-item">
+      <div class="step-num" style="background:var(--sw2);border-color:var(--sw);color:var(--sw)">B</div>
+      <div class="step-body">
+        <h4>iPhone / iPad (Safari)</h4>
+        <p>Open the app URL in Safari → tap the Share button (square with arrow) → <em>"Add to Home Screen"</em>. Must use Safari — Chrome on iOS cannot install PWAs.</p>
+      </div>
+    </div>
+    <div class="step-item">
+      <div class="step-num" style="background:var(--sw2);border-color:var(--sw);color:var(--sw)">C</div>
+      <div class="step-body">
+        <h4>Desktop (Chrome / Edge)</h4>
+        <p>Look for the install icon (⊕) in the address bar → click it → <em>"Install"</em>. The app opens as a standalone window with its own icon.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ API ═══ -->
+<div class="section" id="sec-api">
+  <h2>API Reference</h2>
+
+  <h3>EA Endpoints (X-Api-Key auth)</h3>
+  <div class="doc-table-wrap">
+    <table>
+      <thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><span class="td-method post">POST</span></td><td>/api/ea/push</td><td>Receive candle data from EA. Body: JSON array of candles.</td></tr>
+        <tr><td><span class="td-method get">GET</span></td><td>/api/ea/status</td><td>Check connection + get symbol summary (row counts, latest dates).</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Auth Endpoints</h3>
+  <div class="doc-table-wrap">
+    <table>
+      <thead><tr><th>Method</th><th>Path</th><th>Auth</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><span class="td-method post">POST</span></td><td>/api/auth/login</td><td>None</td><td>Returns JWT token. Body: {username, password}</td></tr>
+        <tr><td><span class="td-method get">GET</span></td><td>/api/auth/me</td><td>JWT</td><td>Returns current user info</td></tr>
+        <tr><td><span class="td-method post">POST</span></td><td>/api/auth/setup</td><td>EA Key</td><td>One-time user creation. Body: {setup_key, users[]}</td></tr>
+        <tr><td><span class="td-method post">POST</span></td><td>/api/auth/change-password</td><td>JWT</td><td>Change your own password</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Data Endpoints (JWT auth)</h3>
+  <div class="doc-table-wrap">
+    <table>
+      <thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><span class="td-method get">GET</span></td><td>/api/candles/</td><td>Summary of all symbols (counts, date ranges)</td></tr>
+        <tr><td><span class="td-method get">GET</span></td><td>/api/candles/:symbol</td><td>OHLCV candles for chart. Params: limit, from, to</td></tr>
+        <tr><td><span class="td-method get">GET</span></td><td>/api/candles/:symbol/latest</td><td>Most recent candle + analysis</td></tr>
+        <tr><td><span class="td-method get">GET</span></td><td>/api/reports/latest</td><td>Latest reports for all 4 symbols</td></tr>
+        <tr><td><span class="td-method get">GET</span></td><td>/api/reports/:symbol</td><td>Report history for one symbol</td></tr>
+        <tr><td><span class="td-method get">GET</span></td><td>/api/reports/:symbol/:date</td><td>Specific report by date (YYYY-MM-DD)</td></tr>
+        <tr><td><span class="td-method post">POST</span></td><td>/api/reports/run</td><td>Manually trigger nightly jobs (admin only)</td></tr>
+        <tr><td><span class="td-method get">GET</span></td><td>/api/push/vapid-public-key</td><td>VAPID public key for browser push registration</td></tr>
+        <tr><td><span class="td-method post">POST</span></td><td>/api/push/subscribe</td><td>Register device for push notifications</td></tr>
+        <tr><td><span class="td-method post">POST</span></td><td>/api/push/unsubscribe</td><td>Remove device subscription</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══ DEPLOY ═══ -->
+<div class="section" id="sec-deploy">
+  <h2>Railway Deploy Guide <span class="tag bu">Step by Step</span></h2>
+
+  <div class="step-list">
+    <div class="step-item">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h4>Create GitHub repo</h4>
+        <p>Extract the zip. Create a new <strong>private</strong> repo on GitHub named <code>kaizoku-reports</code>. Then push:</p>
+        <div class="code-block" style="font-size:11.5px">cd kaizoku-reports
+git init
+git add .
+git commit -m "initial commit"
+git branch -M main
+git remote add origin https://github.com/YOUR_USERNAME/kaizoku-reports.git
+git push -u origin main</div>
+      </div>
+    </div>
+    <div class="step-item">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h4>Create Railway project</h4>
+        <p>Go to <strong>railway.com/dashboard</strong> → <em>New Project</em> → <em>Deploy from GitHub repo</em> → select <code>kaizoku-reports</code>. Railway auto-detects Node.js and deploys.</p>
+      </div>
+    </div>
+    <div class="step-item">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h4>Add PostgreSQL</h4>
+        <p>In your Railway project → click <em>+ New</em> → <em>Database</em> → <em>Add PostgreSQL</em>. Railway auto-sets <code>DATABASE_URL</code> — nothing else needed. The schema creates itself on first boot.</p>
+      </div>
+    </div>
+    <div class="step-item">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <h4>Set environment variables</h4>
+        <p>In your Railway service → <em>Variables</em> tab → add all variables. See the <strong>Environment Variables</strong> section for the full list.</p>
+      </div>
+    </div>
+    <div class="step-item">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <h4>Create users (one-time)</h4>
+        <p>Once deployed, run this command with your actual Railway URL and API key:</p>
+        <div class="code-block" style="font-size:11px">curl -X POST https://your-app.railway.app/api/auth/setup \
+  -H "Content-Type: application/json" \
+  -d '{
+    "setup_key": "YOUR_EA_API_KEY",
+    "users": [
+      {"username":"you",      "password":"yourpass",  "display_name":"Your Name", "role":"admin"},
+      {"username":"friend1",  "password":"pass1",     "display_name":"Friend 1"},
+      {"username":"friend2",  "password":"pass2",     "display_name":"Friend 2"},
+      {"username":"friend3",  "password":"pass3",     "display_name":"Friend 3"}
+    ]
+  }'</div>
+      </div>
+    </div>
+    <div class="step-item">
+      <div class="step-num">6</div>
+      <div class="step-body">
+        <h4>Configure and start the EA</h4>
+        <p>Set up <code>Kaizoku_DataFeeder.mq5</code> in MT5 with your Railway URL and EA API key. The first run will backfill history automatically. Check the EA log and <code>/api/ea/status</code> to confirm data is arriving.</p>
+      </div>
+    </div>
+    <div class="step-item">
+      <div class="step-num">7</div>
+      <div class="step-body">
+        <h4>Share the URL</h4>
+        <p>Railway gives you a URL like <code>kaizoku-reports-production.railway.app</code>. Send it to your 3 friends. They open it, log in with their credentials, and install it as a PWA from Settings.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ENV VARS ═══ -->
+<div class="section" id="sec-envvars">
+  <h2>Environment Variables</h2>
+  <p>Set these in Railway → your service → Variables tab. <code>DATABASE_URL</code> is set automatically by Railway's PostgreSQL plugin.</p>
+
+  <div class="doc-table-wrap">
+    <table>
+      <thead><tr><th>Variable</th><th>Required</th><th>How to get it</th></tr></thead>
+      <tbody>
+        <tr><td>DATABASE_URL</td><td>Auto (Railway)</td><td>Set automatically when you add PostgreSQL — do not touch</td></tr>
+        <tr><td>JWT_SECRET</td><td>✓ Required</td><td>Generate any long random string — e.g. 64 random characters</td></tr>
+        <tr><td>EA_API_KEY</td><td>✓ Required</td><td>Choose any secret string. Put the same value in the EA's InpApiKey parameter</td></tr>
+        <tr><td>VAPID_PUBLIC_KEY</td><td>For push only</td><td>Run: <code>node -e "require('web-push').generateVAPIDKeys()"</code></td></tr>
+        <tr><td>VAPID_PRIVATE_KEY</td><td>For push only</td><td>Same command as above — use the privateKey value</td></tr>
+        <tr><td>VAPID_EMAIL</td><td>For push only</td><td>Format: <code>mailto:your@email.com</code></td></tr>
+        <tr><td>APP_URL</td><td>Recommended</td><td>Your Railway URL: <code>https://your-app.railway.app</code></td></tr>
+        <tr><td>NODE_ENV</td><td>Recommended</td><td>Set to <code>production</code></td></tr>
+        <tr><td>PORT</td><td>Auto (Railway)</td><td>Railway sets this automatically — do not set manually</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout bu">
+    <div class="callout-lbl bu">App starts without VAPID keys</div>
+    <p>After the crash fix, the server starts fine even if VAPID keys are missing. Push notifications simply won't send until you add them. Add them any time — no redeployment needed, Railway hot-reloads environment variables.</p>
+  </div>
+</div>
+
+</div><!-- /content -->
+</div><!-- /main -->
+</div><!-- /shell -->
+
+<script>
+// ── FILE TREE DATA ──
+const FILES = [
+  { name:'kaizoku-reports/', type:'folder', desc:'Project root' },
+  { name:'server.js', type:'file', indent:1, desc:'Express app entry point' },
+  { name:'package.json', type:'file', indent:1, desc:'Dependencies' },
+  { name:'.env.example', type:'file', indent:1, desc:'Environment variable template' },
+  { name:'.gitignore', type:'file', indent:1, desc:'' },
+  { name:'README.md', type:'file', indent:1, desc:'Setup instructions' },
+  { name:'db/', type:'folder', indent:1, desc:'' },
+  { name:'schema.sql', type:'file', indent:2, desc:'5 tables — auto-runs on startup' },
+  { name:'db.js', type:'file', indent:2, desc:'PostgreSQL pool + query helper' },
+  { name:'routes/', type:'folder', indent:1, desc:'' },
+  { name:'auth.js', type:'file', indent:2, desc:'Login · setup · change-password' },
+  { name:'ea.js', type:'file', indent:2, desc:'EA candle push endpoint' },
+  { name:'candles.js', type:'file', indent:2, desc:'Chart data endpoints' },
+  { name:'reports.js', type:'file', indent:2, desc:'Report read + manual trigger' },
+  { name:'push.js', type:'file', indent:2, desc:'Subscribe / unsubscribe' },
+  { name:'middleware.js', type:'file', indent:2, desc:'JWT + EA key auth guards' },
+  { name:'services/', type:'folder', indent:1, desc:'' },
+  { name:'candleClassifier.js', type:'file', indent:2, desc:'14 patterns · structure · bias' },
+  { name:'reportGenerator.js', type:'file', indent:2, desc:'Narrative report builder' },
+  { name:'scheduler.js', type:'file', indent:2, desc:'Nightly cron chain' },
+  { name:'pushNotifications.js', type:'file', indent:2, desc:'FIXED · lazy VAPID · web-push' },
+  { name:'ea/', type:'folder', indent:1, desc:'' },
+  { name:'Kaizoku_DataFeeder.mq5', type:'file', indent:2, desc:'NEW · MT5 D1 data feeder EA' },
+  { name:'public/', type:'folder', indent:1, desc:'Frontend — served as static files' },
+  { name:'index.html', type:'file', indent:2, desc:'Single-page app shell' },
+  { name:'manifest.json', type:'file', indent:2, desc:'PWA manifest' },
+  { name:'sw.js', type:'file', indent:2, desc:'Service worker · cache · push handler' },
+  { name:'css/app.css', type:'file', indent:2, desc:'All styles' },
+  { name:'js/app.js', type:'file', indent:2, desc:'Auth · nav · reports · settings' },
+  { name:'js/charts.js', type:'file', indent:2, desc:'TradingView Lightweight Charts' },
+];
+const HIGHLIGHTED = ['pushNotifications.js', 'Kaizoku_DataFeeder.mq5'];
+
+function buildFileTree() {
+  const tree = document.getElementById('file-tree');
+  tree.innerHTML = FILES.map(f => {
+    const hi = HIGHLIGHTED.some(h => f.name.includes(h));
+    const cls = [
+      'ft-row',
+      f.type === 'folder' ? 'folder' : 'file',
+      hi ? 'highlighted' : ''
+    ].filter(Boolean).join(' ');
+    const indent = '  '.repeat(f.indent || 0);
+    const icon = f.type === 'folder' ? '📁' : (hi ? '⚡' : '·');
+    return `<div class="${cls}">
+      <span class="indent" style="width:${(f.indent||0)*16}px"></span>
+      <span class="ft-icon">${icon}</span>
+      <span class="ft-name">${f.name}${hi ? (f.name.includes('push')?'  ← FIXED':'  ← NEW') : ''}</span>
+      <span class="ft-desc">${f.desc}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── NAVIGATION ──
+const PAGE_META = {
+  overview:  { title:'Project Overview',         sub:'What Kaizoku Reports is and how it works' },
+  fix:       { title:'🔧 Deployment Fix',         sub:'What crashed · What was changed · How to verify' },
+  structure: { title:'File Structure',            sub:'All 23 files explained' },
+  flow:      { title:'Data Flow',                 sub:'EA → Server → Database → Users' },
+  database:  { title:'Database Schema',           sub:'5 PostgreSQL tables' },
+  schedule:  { title:'Nightly Schedule',          sub:'What runs and when (UTC)' },
+  ea:        { title:'MT5 EA — DataFeeder',       sub:'Setup, parameters, MT5 configuration' },
+  backend:   { title:'Backend',                   sub:'Node.js services and candle patterns' },
+  frontend:  { title:'Frontend (PWA)',            sub:'Pages, charts, install instructions' },
+  api:       { title:'API Reference',             sub:'All endpoints with auth requirements' },
+  deploy:    { title:'Railway Deploy Guide',      sub:'Step-by-step deployment' },
+  envvars:   { title:'Environment Variables',     sub:'What each variable does' },
+};
+
+function navTo(secId) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.sn-link').forEach(l => l.classList.remove('active'));
+  document.getElementById('sec-' + secId)?.classList.add('active');
+  document.querySelector(`.sn-link[data-sec="${secId}"]`)?.classList.add('active');
+  const meta = PAGE_META[secId] || { title: secId, sub: '' };
+  document.getElementById('tb-pg').textContent  = meta.title;
+  document.getElementById('tb-sub').textContent = meta.sub;
+  document.getElementById('sidenav').classList.remove('open');
+  document.getElementById('overlay').classList.remove('open');
+  window.scrollTo(0, 0);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  buildFileTree();
+
+  document.querySelectorAll('.sn-link[data-sec]').forEach(el => {
+    el.addEventListener('click', function() { navTo(this.dataset.sec); });
+  });
+
+  document.getElementById('hbtn').addEventListener('click', () => {
+    document.getElementById('sidenav').classList.toggle('open');
+    document.getElementById('overlay').classList.toggle('open');
+  });
+  document.getElementById('overlay').addEventListener('click', () => {
+    document.getElementById('sidenav').classList.remove('open');
+    document.getElementById('overlay').classList.remove('open');
+  });
+
+  // Scroll spy
+  window.addEventListener('scroll', () => {
+    const sections = document.querySelectorAll('.section.active');
+    if (sections.length > 0) return;
+  });
+});
+</script>
+</body>
+</html>
