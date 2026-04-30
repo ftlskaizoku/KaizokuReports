@@ -7,10 +7,10 @@ const KaizokuCharts = (() => {
 
   const CHART_OPTIONS = {
     layout: {
-      background:   { color: '#0f1311' },
-      textColor:    '#7a9088',
+      background:   { color: '#13141c' },
+      textColor:    '#8b8eab',
       fontSize:     11,
-      fontFamily:   "'SF Mono','Consolas','Courier New',monospace",
+      fontFamily:   "'IBM Plex Mono','Consolas','Courier New',monospace",
     },
     grid: {
       vertLines: { color: '#1c2420', style: 1 },
@@ -36,12 +36,12 @@ const KaizokuCharts = (() => {
   };
 
   const CANDLE_OPTIONS = {
-    upColor:          '#3ecf8e',
-    downColor:        '#e8534a',
-    borderUpColor:    '#3ecf8e',
-    borderDownColor:  '#e8534a',
-    wickUpColor:      'rgba(62,207,142,0.6)',
-    wickDownColor:    'rgba(232,83,74,0.6)',
+    upColor:          '#34d399',
+    downColor:        '#f87171',
+    borderUpColor:    '#34d399',
+    borderDownColor:  '#f87171',
+    wickUpColor:      'rgba(52,211,153,0.55)',
+    wickDownColor:    'rgba(248,113,113,0.55)',
   };
 
   function initChart(symbol, containerId, allData) {

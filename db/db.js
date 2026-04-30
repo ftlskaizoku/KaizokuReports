@@ -1,81 +1,134 @@
 'use strict';
-const { initializeApp } = require('firebase/app');
-const { getFirestore, collection, doc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, query, where, orderBy, limit, startAfter } = require('firebase/firestore');
+const { Pool } = require('pg');
 
-let db;
+let pool;
 
-function getDb() {
-  if (!db) {
-    const firebaseConfig = {
-      apiKey: process.env.FIREBASE_API_KEY,
-      authDomain: process.env.FIREBASE_AUTH_DOMAIN,
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-      messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
-      appId: process.env.FIREBASE_APP_ID
-    };
-    const app = initializeApp(firebaseConfig);
-    db = getFirestore(app);
+function getPool() {
+  if (!pool) {
+    pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false },
+      max: 3, // Keep low for serverless
+      idleTimeoutMillis: 10000,
+      connectionTimeoutMillis: 5000,
+    });
   }
-  return db;
+  return pool;
 }
 
-// Simulate SQL-like query with Firestore
-async function query(sql, params = []) {
-  const db = getDb();
-  if (sql.includes('SELECT * FROM users WHERE')) {
-    const usersRef = collection(db, 'users');
-    let q = usersRef;
-    if (sql.includes('LOWER(email)=') || sql.includes('LOWER(username)=')) {
-      const value = params[0];
-      q = query(usersRef, where('email', '==', value));
-    } else if (sql.includes('id=$1')) {
-      const id = params[0];
-      const docRef = doc(usersRef, id);
-      const docSnap = await getDoc(docRef);
-      return { rows: docSnap.exists() ? [{ id: docSnap.id, ...docSnap.data() }] : [] };
-    }
-    const snapshot = await getDocs(q);
-    return { rows: snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) };
-  } else if (sql.includes('INSERT INTO users')) {
-    const usersRef = collection(db, 'users');
-    const data = {
-      username: params[0],
-      email: params[1],
-      password_hash: params[2],
-      display_name: params[3],
-      role: params[4],
-      google_id: params[5] || null,
-      onboarding_complete: false,
-      status: 'active',
-      created_at: new Date()
-    };
-    const docRef = await addDoc(usersRef, data);
-    return { rows: [{ id: docRef.id, ...data }] };
-  } else if (sql.includes('UPDATE users SET')) {
-    // Simplified update
-    const usersRef = collection(db, 'users');
-    const id = params[params.length - 1];
-    const docRef = doc(usersRef, id);
-    const updateData = {};
-    // Parse updates from sql string (simplified)
-    if (sql.includes('onboarding_complete=true')) {
-      updateData.onboarding_complete = true;
-    }
-    await updateDoc(docRef, updateData);
-    return { rows: [{ id }] };
-  } else if (sql.includes('SELECT COUNT(*) AS c FROM users')) {
-    const usersRef = collection(db, 'users');
-    const snapshot = await getDocs(usersRef);
-    return { rows: [{ c: snapshot.size }] };
-  }
-  // Add more as needed
-  throw new Error('Unsupported query: ' + sql);
+async function query(text, params) {
+  return getPool().query(text, params);
 }
 
 async function initDb() {
-  // Firestore doesn't need schema creation like SQL; collections are created on write
-  // We can add initial data if needed
+  const schema = `
+    CREATE TABLE IF NOT EXISTS candles (
+      id           SERIAL PRIMARY KEY,
+      symbol       TEXT NOT NULL,
+      candle_date  DATE NOT NULL,
+      open         NUMERIC(12,4) NOT NULL,
+      high         NUMERIC(12,4) NOT NULL,
+      low          NUMERIC(12,4) NOT NULL,
+      close        NUMERIC(12,4) NOT NULL,
+      volume       BIGINT DEFAULT 0,
+      body_high    NUMERIC(12,4) GENERATED ALWAYS AS (GREATEST(open,close)) STORED,
+      body_low     NUMERIC(12,4) GENERATED ALWAYS AS (LEAST(open,close)) STORED,
+      direction    TEXT GENERATED ALWAYS AS (
+        CASE WHEN close>open THEN 'bullish' WHEN close<open THEN 'bearish' ELSE 'neutral' END
+      ) STORED,
+      created_at   TIMESTAMPTZ DEFAULT NOW(),
+      updated_at   TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(symbol, candle_date)
+    );
+    CREATE INDEX IF NOT EXISTS idx_candles_sym_date ON candles(symbol, candle_date DESC);
+
+    CREATE TABLE IF NOT EXISTS candle_analysis (
+      id                  SERIAL PRIMARY KEY,
+      candle_id           INTEGER UNIQUE REFERENCES candles(id) ON DELETE CASCADE,
+      symbol              TEXT NOT NULL,
+      candle_date         DATE NOT NULL,
+      candle_type         TEXT,
+      structure_label     TEXT,
+      body_pct            NUMERIC(6,2),
+      upper_wick_pct      NUMERIC(6,2),
+      lower_wick_pct      NUMERIC(6,2),
+      close_position      NUMERIC(6,4),
+      range_points        NUMERIC(10,4),
+      body_points         NUMERIC(10,4),
+      d1_bias             TEXT,
+      bias_confidence     NUMERIC(5,2),
+      next_day_direction  TEXT,
+      next_day_return_pct NUMERIC(8,4),
+      outcome_type        TEXT,
+      created_at          TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_analysis_sym_date ON candle_analysis(symbol, candle_date DESC);
+
+    CREATE TABLE IF NOT EXISTS daily_reports (
+      id              SERIAL PRIMARY KEY,
+      symbol          TEXT NOT NULL,
+      report_date     DATE NOT NULL,
+      candle_id       INTEGER REFERENCES candles(id),
+      candle_type     TEXT,
+      bias            TEXT,
+      bias_confidence NUMERIC(5,2),
+      key_levels      JSONB,
+      report_text     TEXT,
+      short_summary   TEXT,
+      generated_at    TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(symbol, report_date)
+    );
+    CREATE INDEX IF NOT EXISTS idx_reports_sym_date ON daily_reports(symbol, report_date DESC);
+
+    CREATE TABLE IF NOT EXISTS users (
+      id            SERIAL PRIMARY KEY,
+      username      TEXT UNIQUE NOT NULL,
+      email         TEXT UNIQUE,
+      password_hash TEXT NOT NULL,
+      display_name  TEXT,
+      role          TEXT DEFAULT 'user',
+      status        TEXT DEFAULT 'active',
+      last_login    TIMESTAMPTZ,
+      created_at    TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS push_subscriptions (
+      id           SERIAL PRIMARY KEY,
+      user_id      INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      subscription JSONB NOT NULL,
+      device_label TEXT,
+      created_at   TIMESTAMPTZ DEFAULT NOW(),
+      updated_at   TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_push_user ON push_subscriptions(user_id);
+
+    CREATE TABLE IF NOT EXISTS pattern_stats (
+      id                SERIAL PRIMARY KEY,
+      symbol            TEXT NOT NULL,
+      candle_type       TEXT NOT NULL,
+      structure_context TEXT NOT NULL DEFAULT 'all',
+      total_occurrences INTEGER DEFAULT 0,
+      bullish_next_pct  NUMERIC(5,2),
+      bearish_next_pct  NUMERIC(5,2),
+      continuation_pct  NUMERIC(5,2),
+      reversal_pct      NUMERIC(5,2),
+      avg_next_return   NUMERIC(8,4),
+      updated_at        TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(symbol, candle_type, structure_context)
+    );
+
+    CREATE TABLE IF NOT EXISTS app_settings (
+      key        TEXT PRIMARY KEY,
+      value      TEXT NOT NULL,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    DO $$ BEGIN
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT UNIQUE;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';
+    EXCEPTION WHEN OTHERS THEN NULL; END $$;
+  `;
+  await query(schema);
 }
 
 module.exports = { query, initDb };

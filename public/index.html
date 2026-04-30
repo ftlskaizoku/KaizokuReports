@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#080b0a">
+<meta name="theme-color" content="#0c0d12">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Kaizoku">
@@ -11,52 +11,62 @@
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
 <link rel="stylesheet" href="/css/app.css">
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 
-<!-- ═══ SETUP SCREEN (first run) ═══ -->
+<!-- Boot screen — shown while checking setup status -->
+<div id="boot-screen" class="boot-screen">
+  <div class="boot-mark">K</div>
+  <div class="boot-spinner"></div>
+</div>
+
+<!-- ═══ SETUP SCREEN ═══ -->
 <div id="setup-screen" class="login-screen" style="display:none">
   <div class="login-card" style="max-width:480px">
     <div class="login-logo"><div class="login-mark">K</div><div class="login-name">Kaizoku <em>Reports</em></div></div>
-    <p class="login-sub" style="margin-bottom:20px">First-time setup — create up to 4 accounts. The first user becomes Admin.</p>
+    <p class="login-sub" style="margin-bottom:20px">First-time setup — create up to 4 accounts. User 1 becomes Admin.</p>
     <div id="setup-form-wrap">
       <form id="setup-form">
-        <div style="font-size:11px;font-family:var(--fm);color:var(--go);text-transform:uppercase;letter-spacing:.7px;margin-bottom:12px">User 1 — Admin</div>
-        <div class="field" style="margin-bottom:10px"><label>Email</label><input type="email" id="su1-email" placeholder="your@email.com" autocomplete="email"></div>
+        <div style="font-family:var(--fm);font-size:10px;color:var(--vi3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">Admin Account (You)</div>
+        <div class="field" style="margin-bottom:10px">
+          <label>Email</label>
+          <input type="email" id="su1-email" placeholder="your@email.com" autocomplete="email">
+        </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
           <div class="field"><label>Username</label><input type="text" id="su1-username" placeholder="e.g. kaizoku" required autocomplete="off"></div>
           <div class="field"><label>Display Name</label><input type="text" id="su1-display" placeholder="e.g. Kaizoku"></div>
         </div>
-        <div class="field" style="margin-bottom:16px"><label>Password (min 8 chars)</label><input type="password" id="su1-password" placeholder="Strong password" required autocomplete="new-password"></div>
-        <div style="font-size:11px;font-family:var(--fm);color:var(--tx3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:12px">Users 2–4 (optional)</div>
-        <div id="optional-users">
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;font-size:12.5px;color:var(--tx2)">
-            <div class="field"><label>Username 2</label><input type="text" id="su2-username" placeholder="friend1" autocomplete="off"></div>
-            <div class="field"><label>Display Name</label><input type="text" id="su2-display" placeholder="Friend 1"></div>
-            <div class="field"><label>Password</label><input type="password" id="su2-password" placeholder="Password" autocomplete="new-password"></div>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
-            <div class="field"><label>Username 3</label><input type="text" id="su3-username" placeholder="friend2" autocomplete="off"></div>
-            <div class="field"><label>Display Name</label><input type="text" id="su3-display" placeholder="Friend 2"></div>
-            <div class="field"><label>Password</label><input type="password" id="su3-password" placeholder="Password" autocomplete="new-password"></div>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
-            <div class="field"><label>Username 4</label><input type="text" id="su4-username" placeholder="friend3" autocomplete="off"></div>
-            <div class="field"><label>Display Name</label><input type="text" id="su4-display" placeholder="Friend 3"></div>
-            <div class="field"><label>Password</label><input type="password" id="su4-password" placeholder="Password" autocomplete="new-password"></div>
-          </div>
+        <div class="field" style="margin-bottom:18px">
+          <label>Password (min 8 chars)</label>
+          <input type="password" id="su1-password" placeholder="Strong password" required autocomplete="new-password">
+        </div>
+
+        <div style="font-family:var(--fm);font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">Other Users (optional — add later in Admin Panel)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+          <div class="field"><label>Username 2</label><input type="text" id="su2-username" placeholder="friend1" autocomplete="off"></div>
+          <div class="field"><label>Display Name</label><input type="text" id="su2-display" placeholder="Friend 1"></div>
+          <div class="field"><label>Password</label><input type="password" id="su2-password" placeholder="Password" autocomplete="new-password"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+          <div class="field"><label>Username 3</label><input type="text" id="su3-username" placeholder="friend2" autocomplete="off"></div>
+          <div class="field"><label>Display Name</label><input type="text" id="su3-display" placeholder="Friend 2"></div>
+          <div class="field"><label>Password</label><input type="password" id="su3-password" placeholder="Password" autocomplete="new-password"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
+          <div class="field"><label>Username 4</label><input type="text" id="su4-username" placeholder="friend3" autocomplete="off"></div>
+          <div class="field"><label>Display Name</label><input type="text" id="su4-display" placeholder="Friend 3"></div>
+          <div class="field"><label>Password</label><input type="password" id="su4-password" placeholder="Password" autocomplete="new-password"></div>
         </div>
         <div id="setup-error" class="login-error" style="display:none"></div>
         <button type="submit" class="btn-primary" id="setup-submit-btn">Create Accounts &amp; Launch</button>
       </form>
     </div>
     <div id="setup-success" style="display:none">
-      <div style="background:var(--bu-d);border:1px solid rgba(62,207,142,.25);border-radius:var(--r2);padding:16px;margin-bottom:16px">
+      <div style="background:var(--bu-bg);border:1px solid var(--bu-bd);border-radius:var(--r2);padding:16px;margin-bottom:16px">
         <div style="color:var(--bu);font-family:var(--fh);font-size:14px;font-weight:700;margin-bottom:8px">✓ Accounts created!</div>
-        <div style="font-size:12.5px;color:var(--tx2);margin-bottom:10px">Your EA API Key (copy this into MetaTrader 5 — <strong style="color:var(--tx)">InpApiKey</strong>):</div>
-        <div id="setup-ea-key" style="font-family:var(--fm);font-size:11px;color:var(--go);background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:10px 12px;word-break:break-all;margin-bottom:10px"></div>
-        <div style="font-size:11.5px;color:var(--tx3)">You can also find this key anytime in Admin Panel → EA Key.</div>
+        <div style="font-size:12.5px;color:var(--tx2);margin-bottom:10px">Your EA API Key — copy this into MetaTrader 5 (<strong style="color:var(--tx)">InpApiKey</strong>):</div>
+        <div id="setup-ea-key" style="font-family:var(--fm);font-size:11px;color:var(--vi3);background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:10px 12px;word-break:break-all;margin-bottom:10px"></div>
+        <div style="font-size:11.5px;color:var(--tx3)">This key is also available anytime in Admin Panel → EA Key.</div>
       </div>
       <button class="btn-primary" id="setup-goto-login">Go to Login →</button>
     </div>
@@ -64,7 +74,7 @@
 </div>
 
 <!-- ═══ LOGIN SCREEN ═══ -->
-<div id="login-screen" class="login-screen">
+<div id="login-screen" class="login-screen" style="display:none">
   <div class="login-card">
     <div class="login-logo"><div class="login-mark">K</div><div class="login-name">Kaizoku <em>Reports</em></div></div>
     <div class="login-sub">Daily intelligence · UK100 · DE30 · XAUUSD · USOIL</div>
@@ -73,23 +83,8 @@
       <div class="field"><label>Password</label><input type="password" id="password" autocomplete="current-password" placeholder="Password" required></div>
       <div id="login-error" class="login-error" style="display:none"></div>
       <button type="submit" class="btn-primary" id="login-btn">Sign In</button>
-      <div id="google-signin-button" style="margin-top:16px"></div>
     </form>
-    <div id="login-footer" style="margin-top:16px;text-align:center;color:var(--tx2);font-size:0.95rem">
-      Don’t have an account? <button type="button" id="show-register-btn" style="border:none;background:none;color:inherit;text-decoration:underline;cursor:pointer;padding:0">Register here</button>
-    </div>
-    <form id="register-form" class="login-form" style="display:none;margin-top:18px">
-      <div class="field"><label>Email</label><input type="email" id="register-email" autocomplete="email" placeholder="your@email.com" required></div>
-      <div class="field"><label>Username</label><input type="text" id="register-username" autocomplete="username" placeholder="Choose a username" required></div>
-      <div class="field"><label>Display Name</label><input type="text" id="register-display" autocomplete="name" placeholder="How others will see you"></div>
-      <div class="field"><label>Password</label><input type="password" id="register-password" autocomplete="new-password" placeholder="Choose a password" required></div>
-      <div class="field"><label>Confirm Password</label><input type="password" id="register-password-confirm" autocomplete="new-password" placeholder="Repeat your password" required></div>
-      <div id="register-error" class="login-error" style="display:none"></div>
-      <button type="submit" class="btn-primary" id="register-btn">Create Account</button>
-      <div style="margin-top:14px;text-align:center;color:var(--tx2);font-size:0.95rem">
-        Already have an account? <button type="button" id="show-login-btn" style="border:none;background:none;color:inherit;text-decoration:underline;cursor:pointer;padding:0">Sign in</button>
-      </div>
-    </form>
+    <div class="login-setup-link">First time? <a id="goto-setup-link">Create your account →</a></div>
   </div>
 </div>
 
@@ -114,7 +109,7 @@
     <div class="nav-sec">
       <div class="nav-lbl">Account</div>
       <div class="nav-a" data-page="settings"><span class="ni">⚙</span>Settings</div>
-      <div class="nav-a" data-page="admin" id="nav-admin" style="display:none"><span class="ni">◈</span>Admin Panel<span class="nbadge" style="background:rgba(167,139,250,.1);color:#a78bfa;border:1px solid rgba(167,139,250,.2)">Admin</span></div>
+      <div class="nav-a" data-page="admin" id="nav-admin" style="display:none"><span class="ni">◈</span>Admin Panel<span class="nbadge" style="background:var(--vi-bg);color:var(--vi3);border:1px solid var(--vi-bd)">Admin</span></div>
     </div>
     <div class="sb-foot">
       <div class="ea-box">
@@ -135,12 +130,10 @@
         <button id="logout-btn" class="icon-btn" title="Sign out">⎋</button>
       </div>
     </header>
-
     <div id="content">
 
-      <!-- REPORTS PAGE -->
+      <!-- REPORTS -->
       <div class="page active" id="page-reports">
-        <!-- Date Navigation Bar -->
         <div id="date-nav" class="date-nav" style="display:none">
           <button id="nav-prev-btn" class="date-nav-btn" title="Previous day">‹</button>
           <div class="date-nav-center">
@@ -155,24 +148,24 @@
         <div id="reports-empty" class="empty-state" style="display:none">
           <div class="empty-icon">◉</div>
           <h3>No report for this date</h3>
-          <p>Reports are generated nightly after market close (22:30 UTC on trading days). Use the arrows to navigate to a date with data.</p>
+          <p>Reports generate nightly at 22:30 UTC on trading days. Use arrows to navigate to a date with data, or ask the admin to run jobs manually.</p>
         </div>
       </div>
 
-      <!-- CHART PAGES -->
+      <!-- CHARTS -->
       <div class="page" id="page-chart-UK100"><div class="chart-page" data-symbol="UK100"></div></div>
       <div class="page" id="page-chart-DE30"><div class="chart-page" data-symbol="DE30"></div></div>
       <div class="page" id="page-chart-XAUUSD"><div class="chart-page" data-symbol="XAUUSD"></div></div>
       <div class="page" id="page-chart-USOIL"><div class="chart-page" data-symbol="USOIL"></div></div>
 
-      <!-- SETTINGS PAGE -->
+      <!-- SETTINGS -->
       <div class="page" id="page-settings">
         <div class="settings-wrap">
           <div class="settings-section">
             <h3>Profile</h3>
-            <p>Update your display name or username.</p>
+            <p>Update your display name, username, or email.</p>
             <form id="profile-form">
-              <div class="field"><label>Email (used for login)</label><input type="email" id="prof-email" autocomplete="email" placeholder="your@email.com"></div>
+              <div class="field" style="margin-bottom:10px"><label>Email</label><input type="email" id="prof-email" autocomplete="email" placeholder="your@email.com"></div>
               <div class="field-row-2">
                 <div class="field"><label>Username</label><input type="text" id="prof-username" autocomplete="username"></div>
                 <div class="field"><label>Display Name</label><input type="text" id="prof-display"></div>
@@ -209,32 +202,12 @@
         </div>
       </div>
 
-      <!-- ONBOARDING PAGE -->
-      <div class="page" id="page-onboarding">
-        <div class="settings-wrap" style="max-width:640px">
-          <div class="settings-section">
-            <h3>Welcome to Kaizoku Reports</h3>
-            <p>Finish this quick onboarding so you can start using the app with your profile and notifications ready.</p>
-            <ol class="onboarding-list" style="margin:18px 0 0 18px;line-height:1.7;color:var(--tx2)">
-              <li>Confirm your profile details in Settings.</li>
-              <li>Enable push notifications to receive daily report alerts.</li>
-              <li>Explore the latest signals and chart views.</li>
-            </ol>
-            <div style="margin-top:24px;display:flex;gap:12px;flex-wrap:wrap">
-              <button id="complete-onboarding-btn" class="btn-primary" style="min-width:190px">Finish onboarding</button>
-              <button id="skip-onboarding-btn" class="btn-secondary" style="min-width:190px">Skip for now</button>
-            </div>
-            <div id="onboarding-msg" class="form-msg" style="display:none;margin-top:14px"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ADMIN PANEL PAGE -->
+      <!-- ADMIN -->
       <div class="page" id="page-admin">
         <div class="settings-wrap" style="max-width:640px">
           <div class="settings-section">
             <h3>User Management</h3>
-            <p>Create, edit, or remove users. Maximum 4 users total. The admin role can access this panel.</p>
+            <p>Create, edit, or remove users. Maximum 4 users. Admin role can access this panel.</p>
             <div id="user-list"><div class="loading-inline"><div class="spinner-sm"></div></div></div>
           </div>
           <div class="settings-section">
@@ -243,17 +216,17 @@
             <div id="ea-key-display"><div class="loading-inline"><div class="spinner-sm"></div></div></div>
           </div>
           <div class="settings-section">
-            <h3>System — Manual Jobs</h3>
-            <p>Manually trigger the nightly classification + report generation cycle. Use this after the EA backfills data for the first time.</p>
+            <h3>System</h3>
+            <p>Manually trigger classification and report generation. Use this after the EA backfills data for the first time.</p>
             <button id="run-jobs-btn" class="btn-primary" style="max-width:260px">Run Nightly Jobs Now</button>
             <div id="jobs-msg" class="form-msg" style="display:none;margin-top:10px"></div>
           </div>
         </div>
       </div>
 
-    </div><!-- /content -->
-  </div><!-- /main -->
-</div><!-- /app -->
+    </div>
+  </div>
+</div>
 
 <div id="overlay"></div>
 

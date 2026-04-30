@@ -20,20 +20,10 @@ const App = (() => {
     token = localStorage.getItem('km_token');
     user  = JSON.parse(localStorage.getItem('km_user') || 'null');
 
-    // Check if setup is required (no users exist yet)
-    try {
-      const s = await api('/api/setup/status', 'GET', null, false);
-      if (s.setup_required) { showSetupScreen(); return; }
-    } catch { /* server might be unreachable — try login anyway */ }
+    // Wire up "First time? Create account" link on login screen
+    const setupLink = document.getElementById('goto-setup-link');
+    if (setupLink) setupLink.addEventListener('click', showSetupScreen);
 
-    if (token && user) {
-      try { user = await api('/api/auth/me'); showApp(); }
-      catch { logout(false); }
-    }
-
-    setupLoginForm();
-    setupRegisterForm();
-    setupGoogleAuth();
     registerServiceWorker();
     setupInstallPrompt();
     updateDate();
@@ -42,12 +32,44 @@ const App = (() => {
     navigator.serviceWorker?.addEventListener('message', e => {
       if (e.data?.type === 'NAVIGATE') navTo('reports');
     });
+
+    // Check setup status — retry once on failure (cold start / DB init delay)
+    let setupRequired = false;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const s = await api('/api/setup/status', 'GET', null, false);
+        setupRequired = s.setup_required;
+        break;
+      } catch (e) {
+        console.warn(`Setup check attempt ${attempt + 1} failed:`, e.message);
+        if (attempt < 2) await new Promise(r => setTimeout(r, 1500));
+      }
+    }
+
+    // Hide boot screen
+    const boot = document.getElementById('boot-screen');
+    if (boot) boot.style.display = 'none';
+
+    if (setupRequired) {
+      showSetupScreen();
+      return;
+    }
+
+    if (token && user) {
+      try { user = await api('/api/auth/me'); showApp(); return; }
+      catch { logout(false); }
+    }
+
+    // Show login
+    document.getElementById('login-screen').style.display = 'flex';
+    setupLoginForm();
   }
 
   // ────────────────────────────────────────────────────────────
   // SETUP SCREEN (first run — no users exist)
   // ────────────────────────────────────────────────────────────
   function showSetupScreen() {
+    document.getElementById('boot-screen').style.display   = 'none';
     document.getElementById('login-screen').style.display  = 'none';
     document.getElementById('app').style.display           = 'none';
     document.getElementById('setup-screen').style.display  = 'flex';
@@ -105,6 +127,17 @@ const App = (() => {
   // AUTH
   // ────────────────────────────────────────────────────────────
   function setupLoginForm() {
+    // Wire "Create account" link
+    const setupLink = document.getElementById('goto-setup-link');
+    if (setupLink && !setupLink.dataset.bound) {
+      setupLink.dataset.bound = '1';
+      setupLink.addEventListener('click', e => {
+        e.preventDefault();
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('setup-screen').style.display = 'flex';
+        setupSetupForm();
+      });
+    }
     const form = document.getElementById('login-form');
     if (!form || form.dataset.bound) return;
     form.dataset.bound = '1';
@@ -129,148 +162,6 @@ const App = (() => {
         btn.disabled = false; btn.textContent = 'Sign In';
       }
     });
-
-    document.getElementById('show-register-btn')?.addEventListener('click', showRegisterScreen);
-  }
-
-  function setupRegisterForm() {
-    const form = document.getElementById('register-form');
-    if (!form || form.dataset.bound) return;
-    form.dataset.bound = '1';
-    form.addEventListener('submit', async e => {
-      e.preventDefault();
-      const btn    = document.getElementById('register-btn');
-      const errEl  = document.getElementById('register-error');
-      const email  = document.getElementById('register-email').value.trim();
-      const username = document.getElementById('register-username').value.trim();
-      const displayName = document.getElementById('register-display').value.trim();
-      const password = document.getElementById('register-password').value;
-      const passwordConfirm = document.getElementById('register-password-confirm').value;
-      errEl.style.display = 'none';
-      if (password !== passwordConfirm) {
-        errEl.textContent = 'Passwords do not match.';
-        errEl.style.display = 'block';
-        return;
-      }
-      btn.disabled = true; btn.textContent = 'Registering...';
-      try {
-        const data = await api('/api/auth/register', 'POST', {
-          email,
-          username,
-          display_name: displayName || username,
-          password,
-        }, false);
-        token = data.token; user = data.user;
-        localStorage.setItem('km_token', token);
-        localStorage.setItem('km_user', JSON.stringify(user));
-        showApp();
-      } catch (err) {
-        errEl.textContent = err.message || 'Registration failed.';
-        errEl.style.display = 'block';
-        btn.disabled = false; btn.textContent = 'Create Account';
-      }
-    });
-
-    document.getElementById('show-login-btn')?.addEventListener('click', showLoginScreen);
-  }
-
-  async function setupGoogleAuth() {
-    const btnContainer = document.getElementById('google-signin-button');
-    if (!btnContainer) return;
-    try {
-      const config = await api('/api/auth/google/config', 'GET', null, false);
-      await waitForGoogleSdk();
-      if (!window.google?.accounts?.id) throw new Error('Google SDK not loaded');
-      google.accounts.id.initialize({ client_id: config.clientId, callback: handleGoogleCredential });
-      google.accounts.id.renderButton(btnContainer, { theme:'outline', size:'large', width:'100%' });
-    } catch (err) {
-      btnContainer.style.display = 'none';
-    }
-  }
-
-  async function waitForGoogleSdk() {
-    for (let i = 0; i < 20; i += 1) {
-      if (window.google?.accounts?.id) return;
-      await new Promise(resolve => setTimeout(resolve, 200));
-    }
-  }
-
-  async function handleGoogleCredential(response) {
-    const errEl = document.getElementById('login-error');
-    if (!response?.credential) {
-      if (errEl) {
-        errEl.textContent = 'Google sign-in failed.';
-        errEl.style.display = 'block';
-      }
-      return;
-    }
-    try {
-      const data = await api('/api/auth/google', 'POST', { token: response.credential }, false);
-      token = data.token; user = data.user;
-      localStorage.setItem('km_token', token);
-      localStorage.setItem('km_user', JSON.stringify(user));
-      showApp();
-    } catch (err) {
-      if (errEl) {
-        errEl.textContent = err.message || 'Google sign-in failed.';
-        errEl.style.display = 'block';
-      }
-    }
-  }
-
-  function setupOnboardingActions() {
-    const completeBtn = document.getElementById('complete-onboarding-btn');
-    if (completeBtn && !completeBtn.dataset.bound) {
-      completeBtn.dataset.bound = '1';
-      completeBtn.addEventListener('click', async () => {
-        completeBtn.disabled = true;
-        completeBtn.textContent = 'Finishing...';
-        try {
-          await api('/api/auth/onboarding/complete', 'POST', null, true);
-          user.onboarding_complete = true;
-          showApp();
-        } catch (err) {
-          completeBtn.disabled = false;
-          completeBtn.textContent = 'Finish onboarding';
-          const msgEl = document.getElementById('onboarding-msg');
-          if (msgEl) {
-            msgEl.textContent = err.message || 'Could not complete onboarding.';
-            msgEl.style.display = 'block';
-          }
-        }
-      });
-    }
-    const skipBtn = document.getElementById('skip-onboarding-btn');
-    if (skipBtn && !skipBtn.dataset.bound) {
-      skipBtn.dataset.bound = '1';
-      skipBtn.addEventListener('click', () => {
-        navTo('reports');
-      });
-    }
-  }
-
-  function showRegisterScreen() {
-    document.getElementById('login-form').style.display = 'none';
-    document.getElementById('login-footer').style.display = 'none';
-    document.getElementById('register-form').style.display = 'block';
-    clearRegisterForm();
-  }
-
-  function showLoginScreen() {
-    document.getElementById('register-form').style.display = 'none';
-    document.getElementById('login-form').style.display = 'block';
-    document.getElementById('login-footer').style.display = 'block';
-    document.getElementById('login-error').style.display = 'none';
-  }
-
-  function clearRegisterForm() {
-    document.getElementById('register-error').style.display = 'none';
-    ['register-email','register-username','register-display','register-password','register-password-confirm'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.value = '';
-    });
-    const btn = document.getElementById('register-btn');
-    if (btn) { btn.disabled = false; btn.textContent = 'Create Account'; }
   }
 
   function showApp() {
@@ -286,11 +177,6 @@ const App = (() => {
     setupNav();
     setupLogout();
     setupSettings();
-    setupOnboardingActions();
-    if (!user.onboarding_complete) {
-      navTo('onboarding');
-      return;
-    }
     loadReports(null);
     checkEAStatus();
     setInterval(checkEAStatus, 90000);
@@ -302,8 +188,10 @@ const App = (() => {
     localStorage.removeItem('km_token');
     localStorage.removeItem('km_user');
     if (redirect) {
-      document.getElementById('app').style.display          = 'none';
-      document.getElementById('login-screen').style.display = 'flex';
+      document.getElementById('app').style.display           = 'none';
+      document.getElementById('setup-screen').style.display  = 'none';
+      document.getElementById('login-screen').style.display  = 'flex';
+      setupLoginForm();
     }
   }
 
