@@ -5,8 +5,12 @@ let pool;
 
 function getPool() {
   if (!pool) {
+    const connectionString = process.env.DATABASE_URL;
+    if (!connectionString) {
+      throw new Error('DATABASE_URL is not configured. Set DATABASE_URL to your PostgreSQL connection string.');
+    }
     pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
+      connectionString,
       ssl: { rejectUnauthorized: false },
       max: 3, // Keep low for serverless
       idleTimeoutMillis: 10000,
