@@ -1,23 +1,25 @@
-# Kaizoku Reports
-
-Kaizoku Reports — private daily market intelligence for UK100, DE30, XAUUSD and USOIL.  
-Built as a PWA — installable on mobile and desktop.
-
----
+# Kaizoku Reports — Netlify Deploy
 
 ## Stack
-
-- **Backend:** Node.js + Express
-- **Database:** PostgreSQL (Railway built-in)
-- **Frontend:** Vanilla JS PWA with TradingView Lightweight Charts
-- **Notifications:** Web Push (self-hosted VAPID)
-- **Hosting:** Railway
+- **Frontend:** Static files → Netlify CDN
+- **Backend:** Netlify Serverless Functions (Express wrapped with serverless-http)
+- **Database:** Neon.tech (free PostgreSQL)
+- **Nightly jobs:** cron-job.org (free, calls `/api/cron/nightly`)
 
 ---
 
-## Setup
+## Step 1 — Database (Neon.tech) — 2 minutes
 
-### 1. Clone and push to GitHub
+1. Go to **neon.tech** → sign up free
+2. Create a new project → name it `kaizoku`
+3. Copy the **Connection string** — looks like:
+   `postgresql://kaizoku:xxxx@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require`
+
+That's your `DATABASE_URL`. No linking, no plugins — just paste it.
+
+---
+
+## Step 2 — GitHub Repo
 
 ```bash
 git init
@@ -27,121 +29,68 @@ git remote add origin https://github.com/YOUR_USERNAME/kaizoku-reports.git
 git push -u origin main
 ```
 
-### 2. Deploy on Railway
+---
 
-1. Go to [railway.com/dashboard](https://railway.com/dashboard)
-2. New Project → Deploy from GitHub repo → select `kaizoku-reports`
-3. Add a **PostgreSQL** plugin to the project
-4. Railway auto-sets `DATABASE_URL` — no action needed
+## Step 3 — Netlify Deploy
 
-### 3. Set environment variables on Railway
-
-In your Railway project → Variables, add:
-
-```
-JWT_SECRET=<generate a long random string>
-EA_API_KEY=<choose a secret key for the EA>
-VAPID_PUBLIC_KEY=<see below>
-VAPID_PRIVATE_KEY=<see below>
-VAPID_EMAIL=mailto:your@email.com
-APP_URL=https://your-app.railway.app
-NODE_ENV=production
-```
-
-**Generate VAPID keys** (run locally once):
-```bash
-npm install
-node -e "const wp=require('web-push'); const k=wp.generateVAPIDKeys(); console.log(JSON.stringify(k,null,2))"
-```
-
-### 4. Create users (run once after deploy)
-
-```bash
-curl -X POST https://your-app.railway.app/api/auth/setup \
-  -H "Content-Type: application/json" \
-  -d '{
-    "setup_key": "YOUR_EA_API_KEY",
-    "users": [
-      {"username": "you",     "password": "yourpassword",   "display_name": "Your Name",   "role": "admin"},
-      {"username": "friend1", "password": "friend1pass",    "display_name": "Friend 1"},
-      {"username": "friend2", "password": "friend2pass",    "display_name": "Friend 2"},
-      {"username": "friend3", "password": "friend3pass",    "display_name": "Friend 3"}
-    ]
-  }'
-```
-
-### 5. Configure the EA
-
-In the MT5 EA settings:
-- **Server URL:** `https://your-app.railway.app/api/ea/push`
-- **API Key header:** `X-Api-Key: YOUR_EA_API_KEY`
-- **Symbols:** UK100, DE30 (or GER30), XAUUSD, USOIL
-- **Timeframe:** D1 only
-
-The EA pushes candles as JSON:
-```json
-[
-  { "symbol": "DE30", "date": "2025-04-24", "open": 24038, "high": 24055, "low": 24006, "close": 24024, "volume": 12345 }
-]
-```
-
-Test EA connection:
-```bash
-curl https://your-app.railway.app/api/ea/status \
-  -H "X-Api-Key: YOUR_EA_API_KEY"
-```
+1. Go to **netlify.com** → Add new site → Import from GitHub
+2. Select `kaizoku-reports` repo
+3. Build settings are auto-detected from `netlify.toml` — no changes needed
+4. Click **Deploy site**
 
 ---
 
-## Nightly Schedule (UTC, Mon–Fri)
+## Step 4 — Environment Variables
 
-| Time  | Job |
-|-------|-----|
-| 22:15 | Classify latest D1 candles |
-| 22:20 | Refresh pattern statistics |
-| 22:30 | Generate reports + send push notifications |
+In Netlify → Site → **Site configuration** → **Environment variables** → Add:
 
----
+| Variable | Value |
+|---|---|
+| `DATABASE_URL` | Your Neon connection string |
+| `JWT_SECRET` | Any long random string |
+| `CRON_SECRET` | Any secret (used to protect the nightly job endpoint) |
+| `VAPID_PUBLIC_KEY` | From: `node -e "const wp=require('web-push'); const k=wp.generateVAPIDKeys(); console.log(JSON.stringify(k))"` |
+| `VAPID_PRIVATE_KEY` | Same command above |
+| `VAPID_EMAIL` | `mailto:your@email.com` |
 
-## Manually trigger reports (admin)
-
-```bash
-curl -X POST https://your-app.railway.app/api/reports/run \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
-```
+After adding variables → **Trigger deploy** to restart.
 
 ---
 
-## API Reference
+## Step 5 — First Run Setup
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| POST | `/api/auth/login` | No | Login |
-| GET  | `/api/auth/me` | JWT | Current user |
-| POST | `/api/auth/setup` | EA Key | Create initial users (once) |
-| POST | `/api/auth/change-password` | JWT | Change password |
-| POST | `/api/ea/push` | EA Key | Push candle data |
-| GET  | `/api/ea/status` | EA Key | EA connection status |
-| GET  | `/api/candles/` | JWT | All symbols summary |
-| GET  | `/api/candles/:symbol` | JWT | Candles for chart |
-| GET  | `/api/candles/:symbol/latest` | JWT | Latest candle |
-| GET  | `/api/reports/latest` | JWT | Latest reports all symbols |
-| GET  | `/api/reports/:symbol` | JWT | Report history |
-| GET  | `/api/reports/:symbol/:date` | JWT | Single report |
-| POST | `/api/reports/run` | JWT Admin | Manually run nightly jobs |
-| GET  | `/api/push/vapid-public-key` | No | VAPID public key |
-| POST | `/api/push/subscribe` | JWT | Subscribe to push |
-| POST | `/api/push/unsubscribe` | JWT | Unsubscribe |
+Open your Netlify URL → you'll see the Setup screen automatically.
+Fill in your admin account (with your email `khalifadylla@gmail.com`) and up to 3 more users.
+Hit **Create Accounts** — done. The EA API key is shown on screen.
 
 ---
 
-## Icon generation
+## Step 6 — EA Setup
 
-Place a 512×512 PNG logo at `/public/icons/icon-512.png` then generate all sizes:
+In MetaTrader 5:
+1. `Tools → Options → Expert Advisors` → Allow WebRequest → add your Netlify URL
+2. Copy `Kaizoku_DataFeeder.mq5` to `MQL5/Experts/` and compile
+3. Set `InpServerURL` = `https://your-site.netlify.app`
+4. Set `InpApiKey` = the key shown after setup (also in Admin Panel)
+5. Attach to any chart
 
-```bash
-npm install -g sharp-cli
-for size in 72 96 128 144 192 512; do
-  sharp -i public/icons/icon-512.png -o public/icons/icon-${size}.png resize ${size}
-done
-```
+---
+
+## Step 7 — Nightly Reports (cron-job.org)
+
+1. Go to **cron-job.org** → sign up free
+2. Create a new cron job:
+   - URL: `https://your-site.netlify.app/api/cron/nightly`
+   - Method: `POST`
+   - Headers: `x-cron-secret: YOUR_CRON_SECRET`
+   - Schedule: `30 22 * * 1-5` (22:30 UTC Mon–Fri)
+3. Save — reports will generate automatically after market close
+
+You can also manually trigger from **Admin Panel → Run Jobs Now** anytime.
+
+---
+
+## Variables Summary
+
+Only required: `DATABASE_URL`, `JWT_SECRET`, `CRON_SECRET`
+Optional (for push notifications): `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_EMAIL`
