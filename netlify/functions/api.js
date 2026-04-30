@@ -9,6 +9,11 @@ const { classifyCandle, classifyContextualPattern, classifyOutcome } = require('
 const { generateReport, refreshPatternStats } = require('../../services/reportGenerator');
 const { sendDailyReportNotifications, saveSubscription, removeSubscription, ensureVapid } = require('../../services/pushNotifications');
 const { getEAKey, regenerateEAKey, isSetupRequired } = require('../../services/settingsService');
+const { OAuth2Client } = require('google-auth-library');
+const crypto = require('crypto');
+
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
@@ -98,7 +103,7 @@ app.post('/api/auth/login', async (req, res) => {
     if (!await bcrypt.compare(password,user.password_hash)) return res.status(401).json({ error:'Invalid credentials.' });
     await query(`UPDATE users SET last_login=NOW() WHERE id=$1`,[user.id]);
     const token=jwt.sign({id:user.id,username:user.username,role:user.role},process.env.JWT_SECRET,{expiresIn:'30d'});
-    res.json({ token, user:{id:user.id,username:user.username,email:user.email,display_name:user.display_name,role:user.role} });
+    res.json({ token, user:{id:user.id,username:user.username,email:user.email,display_name:user.display_name,role:user.role,onboarding_complete:user.onboarding_complete} });
   } catch(e){ res.status(500).json({error:e.message}); }
 });
 
@@ -113,7 +118,7 @@ app.post('/api/auth/register', async (req, res) => {
     if (parseInt(cnt.rows[0].c, 10) >= 4) return res.status(400).json({ error:'Registration is closed. Max users reached.' });
     const hash = await bcrypt.hash(password, 12);
     const r = await query(
-      `INSERT INTO users (username,email,password_hash,display_name,role) VALUES ($1,$2,$3,$4,$5) RETURNING id,username,email,display_name,role`,
+      `INSERT INTO users (username,email,password_hash,display_name,role) VALUES ($1,$2,$3,$4,$5) RETURNING id,username,email,display_name,role,onboarding_complete`,
       [username.toLowerCase().trim(), email.toLowerCase().trim(), hash, display_name || username, 'user']
     );
     const user = r.rows[0];
@@ -125,12 +130,63 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
+app.get('/api/auth/google/config', (req, res) => {
+  if (!GOOGLE_CLIENT_ID) return res.status(500).json({ error:'Google auth is not configured.' });
+  res.json({ clientId: GOOGLE_CLIENT_ID });
+});
+
+app.post('/api/auth/google', async (req, res) => {
+  try {
+    await ensureDb();
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ error:'Missing token.' });
+    if (!googleClient) return res.status(500).json({ error:'Google auth is not configured.' });
+    const ticket = await googleClient.verifyIdToken({ idToken: token, audience: GOOGLE_CLIENT_ID });
+    const payload = ticket.getPayload();
+    const email = payload?.email?.toLowerCase();
+    const displayName = payload?.name || payload?.email;
+    const googleId = payload?.sub;
+    if (!email || !googleId) return res.status(400).json({ error:'Invalid Google token.' });
+    const cnt = await query(`SELECT COUNT(*) AS c FROM users`);
+    let r = await query(`SELECT * FROM users WHERE LOWER(email)=$1 LIMIT 1`, [email]);
+    let user = r.rows[0];
+    if (user) {
+      if (!user.google_id) {
+        await query(`UPDATE users SET google_id=$1 WHERE id=$2`, [googleId, user.id]);
+        user.google_id = googleId;
+      }
+    } else {
+      if (parseInt(cnt.rows[0].c, 10) >= 4) return res.status(400).json({ error:'Registration is closed. Max users reached.' });
+      const randomPassword = crypto.randomBytes(16).toString('hex');
+      const passwordHash = await bcrypt.hash(randomPassword, 12);
+      const insert = await query(
+        `INSERT INTO users (username,email,password_hash,display_name,role,google_id) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id,username,email,display_name,role,onboarding_complete`,
+        [email, email, passwordHash, displayName, 'user', googleId]
+      );
+      user = insert.rows[0];
+    }
+    const tokenJwt = jwt.sign({ id:user.id, username:user.username, role:user.role }, process.env.JWT_SECRET, { expiresIn:'30d' });
+    res.json({ token: tokenJwt, user });
+  } catch (e) {
+    if (e.code === '23505') return res.status(400).json({ error:'Username or email already taken.' });
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/auth/me', authMiddleware, async (req,res)=>{
   try {
     await ensureDb();
-    const r=await query(`SELECT id,username,email,display_name,role,last_login FROM users WHERE id=$1`,[req.user.id]);
+    const r=await query(`SELECT id,username,email,display_name,role,last_login,onboarding_complete FROM users WHERE id=$1`,[req.user.id]);
     if(!r.rows.length) return res.status(404).json({error:'Not found.'});
     res.json(r.rows[0]);
+  } catch(e){res.status(500).json({error:e.message});}
+});
+
+app.post('/api/auth/onboarding/complete', authMiddleware, async (req,res)=>{
+  try {
+    await ensureDb();
+    await query(`UPDATE users SET onboarding_complete=true WHERE id=$1`, [req.user.id]);
+    res.json({message:'Onboarding completed.'});
   } catch(e){res.status(500).json({error:e.message});}
 });
 
@@ -157,7 +213,7 @@ app.patch('/api/auth/profile', authMiddleware, async (req,res)=>{
     if(email!==undefined){updates.push(`email=$${idx++}`);params.push(email?email.toLowerCase().trim():null);}
     if(!updates.length) return res.status(400).json({error:'Nothing to update.'});
     params.push(req.user.id);
-    const r=await query(`UPDATE users SET ${updates.join(',')} WHERE id=$${idx} RETURNING id,username,email,display_name,role`,params);
+    const r=await query(`UPDATE users SET ${updates.join(',')} WHERE id=$${idx} RETURNING id,username,email,display_name,role,onboarding_complete`,params);
     res.json(r.rows[0]);
   } catch(e){
     if(e.code==='23505') return res.status(400).json({error:'Username or email taken.'});

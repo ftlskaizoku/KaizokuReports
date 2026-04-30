@@ -11,6 +11,7 @@
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
 <link rel="stylesheet" href="/css/app.css">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 
@@ -72,6 +73,7 @@
       <div class="field"><label>Password</label><input type="password" id="password" autocomplete="current-password" placeholder="Password" required></div>
       <div id="login-error" class="login-error" style="display:none"></div>
       <button type="submit" class="btn-primary" id="login-btn">Sign In</button>
+      <div id="google-signin-button" style="margin-top:16px"></div>
     </form>
     <div id="login-footer" style="margin-top:16px;text-align:center;color:var(--tx2);font-size:0.95rem">
       Don’t have an account? <button type="button" id="show-register-btn" style="border:none;background:none;color:inherit;text-decoration:underline;cursor:pointer;padding:0">Register here</button>
@@ -203,6 +205,26 @@
             <p>Add Kaizoku Reports to your home screen for the best experience.</p>
             <button id="install-btn" class="btn-secondary" style="display:none;max-width:200px">Install App</button>
             <p id="install-note" class="install-note" style="display:none"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ONBOARDING PAGE -->
+      <div class="page" id="page-onboarding">
+        <div class="settings-wrap" style="max-width:640px">
+          <div class="settings-section">
+            <h3>Welcome to Kaizoku Reports</h3>
+            <p>Finish this quick onboarding so you can start using the app with your profile and notifications ready.</p>
+            <ol class="onboarding-list" style="margin:18px 0 0 18px;line-height:1.7;color:var(--tx2)">
+              <li>Confirm your profile details in Settings.</li>
+              <li>Enable push notifications to receive daily report alerts.</li>
+              <li>Explore the latest signals and chart views.</li>
+            </ol>
+            <div style="margin-top:24px;display:flex;gap:12px;flex-wrap:wrap">
+              <button id="complete-onboarding-btn" class="btn-primary" style="min-width:190px">Finish onboarding</button>
+              <button id="skip-onboarding-btn" class="btn-secondary" style="min-width:190px">Skip for now</button>
+            </div>
+            <div id="onboarding-msg" class="form-msg" style="display:none;margin-top:14px"></div>
           </div>
         </div>
       </div>

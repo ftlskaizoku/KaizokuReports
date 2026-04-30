@@ -92,6 +92,8 @@ async function initDb() {
       display_name  TEXT,
       role          TEXT DEFAULT 'user',
       status        TEXT DEFAULT 'active',
+      google_id     TEXT UNIQUE,
+      onboarding_complete BOOLEAN DEFAULT FALSE,
       last_login    TIMESTAMPTZ,
       created_at    TIMESTAMPTZ DEFAULT NOW()
     );
@@ -130,6 +132,8 @@ async function initDb() {
     DO $$ BEGIN
       ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT UNIQUE;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id TEXT UNIQUE;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarding_complete BOOLEAN DEFAULT FALSE;
     EXCEPTION WHEN OTHERS THEN NULL; END $$;
   `;
   await query(schema);

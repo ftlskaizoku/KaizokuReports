@@ -33,6 +33,7 @@ const App = (() => {
 
     setupLoginForm();
     setupRegisterForm();
+    setupGoogleAuth();
     registerServiceWorker();
     setupInstallPrompt();
     updateDate();
@@ -173,6 +174,81 @@ const App = (() => {
     document.getElementById('show-login-btn')?.addEventListener('click', showLoginScreen);
   }
 
+  async function setupGoogleAuth() {
+    const btnContainer = document.getElementById('google-signin-button');
+    if (!btnContainer) return;
+    try {
+      const config = await api('/api/auth/google/config', 'GET', null, false);
+      await waitForGoogleSdk();
+      if (!window.google?.accounts?.id) throw new Error('Google SDK not loaded');
+      google.accounts.id.initialize({ client_id: config.clientId, callback: handleGoogleCredential });
+      google.accounts.id.renderButton(btnContainer, { theme:'outline', size:'large', width:'100%' });
+    } catch (err) {
+      btnContainer.style.display = 'none';
+    }
+  }
+
+  async function waitForGoogleSdk() {
+    for (let i = 0; i < 20; i += 1) {
+      if (window.google?.accounts?.id) return;
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+  }
+
+  async function handleGoogleCredential(response) {
+    const errEl = document.getElementById('login-error');
+    if (!response?.credential) {
+      if (errEl) {
+        errEl.textContent = 'Google sign-in failed.';
+        errEl.style.display = 'block';
+      }
+      return;
+    }
+    try {
+      const data = await api('/api/auth/google', 'POST', { token: response.credential }, false);
+      token = data.token; user = data.user;
+      localStorage.setItem('km_token', token);
+      localStorage.setItem('km_user', JSON.stringify(user));
+      showApp();
+    } catch (err) {
+      if (errEl) {
+        errEl.textContent = err.message || 'Google sign-in failed.';
+        errEl.style.display = 'block';
+      }
+    }
+  }
+
+  function setupOnboardingActions() {
+    const completeBtn = document.getElementById('complete-onboarding-btn');
+    if (completeBtn && !completeBtn.dataset.bound) {
+      completeBtn.dataset.bound = '1';
+      completeBtn.addEventListener('click', async () => {
+        completeBtn.disabled = true;
+        completeBtn.textContent = 'Finishing...';
+        try {
+          await api('/api/auth/onboarding/complete', 'POST', null, true);
+          user.onboarding_complete = true;
+          showApp();
+        } catch (err) {
+          completeBtn.disabled = false;
+          completeBtn.textContent = 'Finish onboarding';
+          const msgEl = document.getElementById('onboarding-msg');
+          if (msgEl) {
+            msgEl.textContent = err.message || 'Could not complete onboarding.';
+            msgEl.style.display = 'block';
+          }
+        }
+      });
+    }
+    const skipBtn = document.getElementById('skip-onboarding-btn');
+    if (skipBtn && !skipBtn.dataset.bound) {
+      skipBtn.dataset.bound = '1';
+      skipBtn.addEventListener('click', () => {
+        navTo('reports');
+      });
+    }
+  }
+
   function showRegisterScreen() {
     document.getElementById('login-form').style.display = 'none';
     document.getElementById('login-footer').style.display = 'none';
@@ -210,6 +286,11 @@ const App = (() => {
     setupNav();
     setupLogout();
     setupSettings();
+    setupOnboardingActions();
+    if (!user.onboarding_complete) {
+      navTo('onboarding');
+      return;
+    }
     loadReports(null);
     checkEAStatus();
     setInterval(checkEAStatus, 90000);
