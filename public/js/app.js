@@ -32,6 +32,7 @@ const App = (() => {
     }
 
     setupLoginForm();
+    setupRegisterForm();
     registerServiceWorker();
     setupInstallPrompt();
     updateDate();
@@ -127,6 +128,73 @@ const App = (() => {
         btn.disabled = false; btn.textContent = 'Sign In';
       }
     });
+
+    document.getElementById('show-register-btn')?.addEventListener('click', showRegisterScreen);
+  }
+
+  function setupRegisterForm() {
+    const form = document.getElementById('register-form');
+    if (!form || form.dataset.bound) return;
+    form.dataset.bound = '1';
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      const btn    = document.getElementById('register-btn');
+      const errEl  = document.getElementById('register-error');
+      const email  = document.getElementById('register-email').value.trim();
+      const username = document.getElementById('register-username').value.trim();
+      const displayName = document.getElementById('register-display').value.trim();
+      const password = document.getElementById('register-password').value;
+      const passwordConfirm = document.getElementById('register-password-confirm').value;
+      errEl.style.display = 'none';
+      if (password !== passwordConfirm) {
+        errEl.textContent = 'Passwords do not match.';
+        errEl.style.display = 'block';
+        return;
+      }
+      btn.disabled = true; btn.textContent = 'Registering...';
+      try {
+        const data = await api('/api/auth/register', 'POST', {
+          email,
+          username,
+          display_name: displayName || username,
+          password,
+        }, false);
+        token = data.token; user = data.user;
+        localStorage.setItem('km_token', token);
+        localStorage.setItem('km_user', JSON.stringify(user));
+        showApp();
+      } catch (err) {
+        errEl.textContent = err.message || 'Registration failed.';
+        errEl.style.display = 'block';
+        btn.disabled = false; btn.textContent = 'Create Account';
+      }
+    });
+
+    document.getElementById('show-login-btn')?.addEventListener('click', showLoginScreen);
+  }
+
+  function showRegisterScreen() {
+    document.getElementById('login-form').style.display = 'none';
+    document.getElementById('login-footer').style.display = 'none';
+    document.getElementById('register-form').style.display = 'block';
+    clearRegisterForm();
+  }
+
+  function showLoginScreen() {
+    document.getElementById('register-form').style.display = 'none';
+    document.getElementById('login-form').style.display = 'block';
+    document.getElementById('login-footer').style.display = 'block';
+    document.getElementById('login-error').style.display = 'none';
+  }
+
+  function clearRegisterForm() {
+    document.getElementById('register-error').style.display = 'none';
+    ['register-email','register-username','register-display','register-password','register-password-confirm'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    const btn = document.getElementById('register-btn');
+    if (btn) { btn.disabled = false; btn.textContent = 'Create Account'; }
   }
 
   function showApp() {

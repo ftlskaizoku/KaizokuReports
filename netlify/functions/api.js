@@ -102,6 +102,29 @@ app.post('/api/auth/login', async (req, res) => {
   } catch(e){ res.status(500).json({error:e.message}); }
 });
 
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    await ensureDb();
+    const { email, username, display_name, password } = req.body;
+    if (!email || !email.trim()) return res.status(400).json({ error:'Email is required.' });
+    if (!username || username.trim().length < 2) return res.status(400).json({ error:'Username must be at least 2 characters.' });
+    if (!password || password.length < 8) return res.status(400).json({ error:'Password must be at least 8 characters.' });
+    const cnt = await query(`SELECT COUNT(*) AS c FROM users`);
+    if (parseInt(cnt.rows[0].c, 10) >= 4) return res.status(400).json({ error:'Registration is closed. Max users reached.' });
+    const hash = await bcrypt.hash(password, 12);
+    const r = await query(
+      `INSERT INTO users (username,email,password_hash,display_name,role) VALUES ($1,$2,$3,$4,$5) RETURNING id,username,email,display_name,role`,
+      [username.toLowerCase().trim(), email.toLowerCase().trim(), hash, display_name || username, 'user']
+    );
+    const user = r.rows[0];
+    const token = jwt.sign({ id:user.id, username:user.username, role:user.role }, process.env.JWT_SECRET, { expiresIn:'30d' });
+    res.json({ token, user });
+  } catch(e) {
+    if (e.code === '23505') return res.status(400).json({ error:'Username or email already taken.' });
+    res.status(500).json({ error:e.message });
+  }
+});
+
 app.get('/api/auth/me', authMiddleware, async (req,res)=>{
   try {
     await ensureDb();

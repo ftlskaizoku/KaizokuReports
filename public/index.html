@@ -73,6 +73,21 @@
       <div id="login-error" class="login-error" style="display:none"></div>
       <button type="submit" class="btn-primary" id="login-btn">Sign In</button>
     </form>
+    <div id="login-footer" style="margin-top:16px;text-align:center;color:var(--tx2);font-size:0.95rem">
+      Don’t have an account? <button type="button" id="show-register-btn" style="border:none;background:none;color:inherit;text-decoration:underline;cursor:pointer;padding:0">Register here</button>
+    </div>
+    <form id="register-form" class="login-form" style="display:none;margin-top:18px">
+      <div class="field"><label>Email</label><input type="email" id="register-email" autocomplete="email" placeholder="your@email.com" required></div>
+      <div class="field"><label>Username</label><input type="text" id="register-username" autocomplete="username" placeholder="Choose a username" required></div>
+      <div class="field"><label>Display Name</label><input type="text" id="register-display" autocomplete="name" placeholder="How others will see you"></div>
+      <div class="field"><label>Password</label><input type="password" id="register-password" autocomplete="new-password" placeholder="Choose a password" required></div>
+      <div class="field"><label>Confirm Password</label><input type="password" id="register-password-confirm" autocomplete="new-password" placeholder="Repeat your password" required></div>
+      <div id="register-error" class="login-error" style="display:none"></div>
+      <button type="submit" class="btn-primary" id="register-btn">Create Account</button>
+      <div style="margin-top:14px;text-align:center;color:var(--tx2);font-size:0.95rem">
+        Already have an account? <button type="button" id="show-login-btn" style="border:none;background:none;color:inherit;text-decoration:underline;cursor:pointer;padding:0">Sign in</button>
+      </div>
+    </form>
   </div>
 </div>
 
