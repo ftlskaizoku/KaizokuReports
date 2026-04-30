@@ -43,40 +43,34 @@ const ALIASES = { GER30:'DE30',GER40:'DE30',DE40:'DE30',DAX:'DE30',DAX40:'DE30',
 function normSym(s) { const u=(s||'').toUpperCase().replace(/[^A-Z0-9]/g,''); return ALIASES[u]||(VALID_SYMBOLS.includes(u)?u:null); }
 
 // ════════════════════════════════════════════
-// SETUP
+// OPEN SIGNUP — no user limit
 // ════════════════════════════════════════════
-app.get('/api/setup/status', async (req, res) => {
-  try { await ensureDb(); res.json({ setup_required: await isSetupRequired() }); }
-  catch(e) { res.status(500).json({ error: e.message }); }
-});
-
-app.post('/api/setup', async (req, res) => {
+app.post('/api/auth/signup', async (req, res) => {
   try {
     await ensureDb();
-    if (!(await isSetupRequired())) return res.status(400).json({ error: 'Setup already complete.' });
-    const { users } = req.body;
-    if (!users?.length) return res.status(400).json({ error: 'Provide users array.' });
-    if (users.length > 4) return res.status(400).json({ error: 'Max 4 users.' });
-    for (let i=0;i<users.length;i++) {
-      if (!users[i].username||users[i].username.length<2) return res.status(400).json({ error:`User ${i+1}: username too short.` });
-      if (!users[i].password||users[i].password.length<8) return res.status(400).json({ error:`User ${i+1}: password min 8 chars.` });
-    }
-    const created = [];
-    for (let i=0;i<users.length;i++) {
-      const u=users[i];
-      const hash=await bcrypt.hash(u.password,12);
-      const r=await query(
-        `INSERT INTO users (username,email,password_hash,display_name,role) VALUES ($1,$2,$3,$4,$5)
-         RETURNING id,username,email,display_name,role`,
-        [u.username.toLowerCase().trim(),u.email?.toLowerCase().trim()||null,hash,u.display_name||u.username,i===0?'admin':'user']
-      );
-      created.push(r.rows[0]);
-    }
-    const eaKey=await getEAKey();
-    res.json({ message:'Setup complete.', users:created, ea_key:eaKey });
+    const { username, email, password, display_name } = req.body;
+    if (!username || username.trim().length < 2) return res.status(400).json({ error: 'Username must be at least 2 characters.' });
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Valid email required.' });
+    if (!password || password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+
+    // First user ever becomes admin
+    const cnt = await query('SELECT COUNT(*) AS c FROM users');
+    const isFirst = parseInt(cnt.rows[0].c) === 0;
+
+    const hash = await bcrypt.hash(password, 12);
+    const r = await query(
+      `INSERT INTO users (username, email, password_hash, display_name, role)
+       VALUES ($1,$2,$3,$4,$5)
+       RETURNING id, username, email, display_name, role`,
+      [username.toLowerCase().trim(), email.toLowerCase().trim(), hash, display_name?.trim() || username, isFirst ? 'admin' : 'user']
+    );
+
+    const user = r.rows[0];
+    const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, process.env.JWT_SECRET, { expiresIn: '30d' });
+    res.json({ token, user });
   } catch(e) {
-    if(e.code==='23505') return res.status(400).json({ error:'Username or email already taken.' });
-    res.status(500).json({ error:e.message });
+    if (e.code === '23505') return res.status(400).json({ error: 'That username or email is already registered.' });
+    res.status(500).json({ error: e.message });
   }
 });
 
@@ -153,8 +147,7 @@ app.get('/api/admin/users', authMiddleware, adminOnly, async (req,res)=>{
 app.post('/api/admin/users', authMiddleware, adminOnly, async (req,res)=>{
   try {
     await ensureDb();
-    const cnt=await query(`SELECT COUNT(*) AS c FROM users`);
-    if(parseInt(cnt.rows[0].c)>=4) return res.status(400).json({error:'Max 4 users.'});
+
     const {username,email,password,display_name,role}=req.body;
     if(!username||username.trim().length<2) return res.status(400).json({error:'Username min 2 chars.'});
     if(!password||password.length<8) return res.status(400).json({error:'Password min 8 chars.'});
