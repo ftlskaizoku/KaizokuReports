@@ -1,14 +1,6 @@
 {
   "name": "kaizoku-reports",
   "version": "1.0.0",
-<<<<<<< HEAD
-=======
-  "description": "Kaizoku Reports — Daily market intelligence",
-  "scripts": {
-    "dev": "netlify dev",
-    "build": "echo 'No build step needed'"
-  },
->>>>>>> 8063827b3b7f4f57abff358a4d5a4b65aeb2d382
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "express": "^4.19.2",
@@ -17,14 +9,5 @@
     "serverless-http": "^3.2.0",
     "web-push": "^3.6.7"
   },
-<<<<<<< HEAD
   "engines": { "node": ">=18.0.0" }
-=======
-  "devDependencies": {
-    "netlify-cli": "^17.0.0"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  }
->>>>>>> 8063827b3b7f4f57abff358a4d5a4b65aeb2d382
 }

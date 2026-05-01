@@ -6,19 +6,11 @@
   node_bundler = "esbuild"
   included_files = ["db/**", "services/**"]
 
-<<<<<<< HEAD
-=======
-# Route all API calls to the serverless function
->>>>>>> 8063827b3b7f4f57abff358a4d5a4b65aeb2d382
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/api/:splat"
   status = 200
 
-<<<<<<< HEAD
-=======
-# SPA fallback
->>>>>>> 8063827b3b7f4f57abff358a4d5a4b65aeb2d382
 [[redirects]]
   from = "/*"
   to = "/index.html"

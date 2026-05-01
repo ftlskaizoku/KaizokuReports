@@ -1,7 +1,6 @@
 {
   "name": "Kaizoku Reports",
   "short_name": "Kaizoku",
-<<<<<<< HEAD
   "description": "Daily market intelligence — UK100, DE30, XAUUSD, USOIL",
   "start_url": "/",
   "display": "standalone",
@@ -16,54 +15,3 @@
     {"src":"/icons/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
   ]
 }
-=======
-  "description": "Kaizoku Reports \u2014 Daily market intelligence",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#0c0d12",
-  "theme_color": "#0c0d12",
-  "orientation": "any",
-  "icons": [
-    {
-      "src": "/icons/icon-72.png",
-      "sizes": "72x72",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icons/icon-96.png",
-      "sizes": "96x96",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icons/icon-128.png",
-      "sizes": "128x128",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icons/icon-144.png",
-      "sizes": "144x144",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icons/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
-  ],
-  "categories": [
-    "finance"
-  ],
-  "screenshots": []
-}
->>>>>>> 8063827b3b7f4f57abff358a4d5a4b65aeb2d382
