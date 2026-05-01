@@ -2,125 +2,183 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#0c0d12">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0c0d14">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Kaizoku">
 <title>Kaizoku Reports</title>
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@300;400;500&family=Instrument+Sans:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="/css/app.css">
 </head>
 <body>
 
-<!-- Boot loader -->
-<div id="boot-screen" class="boot-screen">
-  <div class="boot-mark">K</div>
-  <div class="boot-spinner"></div>
+<!-- ── BOOT ── -->
+<div id="boot" class="boot">
+  <div class="boot-logo">
+    <div class="boot-k">K</div>
+  </div>
+  <div class="boot-ring"></div>
 </div>
 
-<!-- ═══ AUTH SCREENS ═══ -->
-<div id="auth-wrap" style="display:none">
+<!-- ── ONBOARDING ── -->
+<div id="onboarding" class="screen" style="display:none">
+  <div class="ob-bg">
+    <div class="ob-blob ob-blob1"></div>
+    <div class="ob-blob ob-blob2"></div>
+  </div>
+  <div class="ob-content">
+    <div class="ob-logo">
+      <div class="ob-mark">K</div>
+      <div>
+        <h1 class="ob-title">Kaizoku <em>Reports</em></h1>
+        <p class="ob-sub">Daily market intelligence</p>
+      </div>
+    </div>
+    <div class="ob-features">
+      <div class="ob-feat">
+        <div class="ob-feat-icon">◉</div>
+        <div>
+          <div class="ob-feat-title">Daily D1 Reports</div>
+          <div class="ob-feat-desc">Candle classification, bias & key levels for UK100, DE30, XAUUSD and USOIL — every trading day.</div>
+        </div>
+      </div>
+      <div class="ob-feat">
+        <div class="ob-feat-icon">◫</div>
+        <div>
+          <div class="ob-feat-title">Broker Charts</div>
+          <div class="ob-feat-desc">Full candlestick history fed directly from your MT5 EA. Navigate back in time to any date.</div>
+        </div>
+      </div>
+      <div class="ob-feat">
+        <div class="ob-feat-icon">◈</div>
+        <div>
+          <div class="ob-feat-title">Push Notifications</div>
+          <div class="ob-feat-desc">Get notified the moment your daily report is ready — on any device, phone or desktop.</div>
+        </div>
+      </div>
+      <div class="ob-feat">
+        <div class="ob-feat-icon">⊕</div>
+        <div>
+          <div class="ob-feat-title">Installable PWA</div>
+          <div class="ob-feat-desc">Add to home screen on iPhone, Android or desktop Chrome. Works like a native app.</div>
+        </div>
+      </div>
+    </div>
+    <button class="ob-cta" id="ob-start">Get Started →</button>
+    <button class="ob-skip" id="ob-skip">Already have an account? Sign in</button>
+  </div>
+</div>
 
-  <!-- Tabs -->
-  <div class="auth-screen">
+<!-- ── AUTH ── -->
+<div id="auth" class="screen" style="display:none">
+  <div class="ob-bg">
+    <div class="ob-blob ob-blob1"></div>
+    <div class="ob-blob ob-blob2"></div>
+  </div>
+  <div class="auth-wrap">
     <div class="auth-card">
-
-      <!-- Brand -->
       <div class="auth-brand">
         <div class="auth-mark">K</div>
         <div>
-          <div class="auth-name">Kaizoku <em>Reports</em></div>
-          <div class="auth-tagline">Daily market intelligence</div>
+          <div class="auth-title">Kaizoku <em>Reports</em></div>
+          <div class="auth-tagline">UK100 · DE30 · XAUUSD · USOIL</div>
         </div>
       </div>
-
-      <!-- Tab switcher -->
       <div class="auth-tabs">
         <button class="auth-tab active" data-tab="login">Sign In</button>
         <button class="auth-tab" data-tab="signup">Create Account</button>
       </div>
 
-      <!-- LOGIN FORM -->
+      <!-- LOGIN -->
       <div class="auth-panel active" id="panel-login">
         <form id="login-form">
           <div class="field">
             <label>Email or Username</label>
-            <input type="text" id="login-field" autocomplete="username" placeholder="your@email.com" required>
+            <input type="text" id="li-login" autocomplete="username" placeholder="your@email.com" required>
           </div>
           <div class="field">
             <label>Password</label>
-            <div class="pw-wrap">
-              <input type="password" id="login-password" autocomplete="current-password" placeholder="Your password" required>
-              <button type="button" class="pw-toggle" data-target="login-password">👁</button>
+            <div class="pw-row">
+              <input type="password" id="li-pass" autocomplete="current-password" placeholder="Your password" required>
+              <button type="button" class="pw-eye" data-for="li-pass">👁</button>
             </div>
           </div>
-          <div id="login-error" class="auth-error" style="display:none"></div>
-          <button type="submit" class="btn-auth" id="login-btn">Sign In</button>
+          <div id="li-err" class="auth-msg err" style="display:none"></div>
+          <button type="submit" class="btn-vi w100" id="li-btn">Sign In</button>
         </form>
       </div>
 
-      <!-- SIGNUP FORM -->
+      <!-- SIGNUP -->
       <div class="auth-panel" id="panel-signup">
         <form id="signup-form">
           <div class="field">
-            <label>Display Name</label>
-            <input type="text" id="signup-display" autocomplete="name" placeholder="Your name" required>
+            <label>Your Name</label>
+            <input type="text" id="su-name" autocomplete="name" placeholder="Display name" required>
           </div>
           <div class="field">
             <label>Email</label>
-            <input type="email" id="signup-email" autocomplete="email" placeholder="your@email.com" required>
+            <input type="email" id="su-email" autocomplete="email" placeholder="your@email.com" required>
           </div>
           <div class="field">
             <label>Username</label>
-            <input type="text" id="signup-username" autocomplete="username" placeholder="Choose a username" required>
+            <input type="text" id="su-user" autocomplete="username" placeholder="Choose a username" required>
           </div>
           <div class="field">
-            <label>Password <span style="color:var(--tx4);font-weight:400">(min 8 characters)</span></label>
-            <div class="pw-wrap">
-              <input type="password" id="signup-password" autocomplete="new-password" placeholder="Create a password" required>
-              <button type="button" class="pw-toggle" data-target="signup-password">👁</button>
+            <label>Password <small>(min 8 characters)</small></label>
+            <div class="pw-row">
+              <input type="password" id="su-pass" autocomplete="new-password" placeholder="Create a strong password" required>
+              <button type="button" class="pw-eye" data-for="su-pass">👁</button>
             </div>
           </div>
-          <div id="signup-error" class="auth-error" style="display:none"></div>
-          <div id="signup-success" class="auth-success" style="display:none"></div>
-          <button type="submit" class="btn-auth" id="signup-btn">Create Account</button>
+          <div id="su-err" class="auth-msg err" style="display:none"></div>
+          <button type="submit" class="btn-vi w100" id="su-btn">Create Account</button>
         </form>
-        <p class="auth-note">Your account will be active immediately. The admin can manage access from the Admin Panel.</p>
+        <p class="auth-note">First account created becomes Admin.</p>
       </div>
 
     </div>
   </div>
 </div>
 
-<!-- ═══ APP ═══ -->
+<!-- ── APP ── -->
 <div id="app" style="display:none">
   <nav id="sidebar">
-    <div class="sb-logo">
-      <div class="sb-mark">K</div>
-      <div><div class="sb-name">Kaizoku <em>Reports</em></div><span class="sb-ver">Daily Intelligence</span></div>
+    <div class="sb-top">
+      <div class="sb-brand">
+        <div class="sb-k">K</div>
+        <div>
+          <div class="sb-name">Kaizoku <em>Reports</em></div>
+          <span class="sb-tagline">Daily Intelligence</span>
+        </div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-label">Overview</div>
+        <div class="nav-item active" data-page="reports"><span class="nav-icon">◉</span>Daily Reports<span id="rpt-badge" class="nav-badge live" style="display:none">NEW</span></div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-label">Charts</div>
+        <div class="nav-item" data-page="chart-UK100"><span class="nav-icon">◫</span>UK100<span class="nav-close" id="close-UK100"></span></div>
+        <div class="nav-item" data-page="chart-DE30"><span class="nav-icon">◫</span>DE30<span class="nav-close" id="close-DE30"></span></div>
+        <div class="nav-item" data-page="chart-XAUUSD"><span class="nav-icon">◫</span>XAUUSD<span class="nav-close" id="close-XAUUSD"></span></div>
+        <div class="nav-item" data-page="chart-USOIL"><span class="nav-icon">◫</span>USOIL<span class="nav-close" id="close-USOIL"></span></div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-label">Account</div>
+        <div class="nav-item" data-page="settings"><span class="nav-icon">⚙</span>Settings</div>
+        <div class="nav-item" data-page="admin" id="nav-admin" style="display:none"><span class="nav-icon">◈</span>Admin Panel<span class="nav-badge">Admin</span></div>
+      </div>
     </div>
-    <div class="nav-sec">
-      <div class="nav-lbl">Overview</div>
-      <div class="nav-a active" data-page="reports"><span class="ni">◉</span>Daily Reports<span class="nbadge live" id="report-badge" style="display:none">NEW</span></div>
-    </div>
-    <div class="nav-sec">
-      <div class="nav-lbl">Charts</div>
-      <div class="nav-a" data-page="chart-UK100"><span class="ni">◫</span>UK100<span class="sym-close" id="close-UK100"></span></div>
-      <div class="nav-a" data-page="chart-DE30"><span class="ni">◫</span>DE30<span class="sym-close" id="close-DE30"></span></div>
-      <div class="nav-a" data-page="chart-XAUUSD"><span class="ni">◫</span>XAUUSD<span class="sym-close" id="close-XAUUSD"></span></div>
-      <div class="nav-a" data-page="chart-USOIL"><span class="ni">◫</span>USOIL<span class="sym-close" id="close-USOIL"></span></div>
-    </div>
-    <div class="nav-sec">
-      <div class="nav-lbl">Account</div>
-      <div class="nav-a" data-page="settings"><span class="ni">⚙</span>Settings</div>
-      <div class="nav-a" data-page="admin" id="nav-admin" style="display:none"><span class="ni">◈</span>Admin Panel<span class="nbadge" style="background:var(--vi-bg);color:var(--vi3);border:1px solid var(--vi-bd)">Admin</span></div>
-    </div>
-    <div class="sb-foot">
-      <div class="ea-box">
-        <div class="ea-dot" id="ea-dot"></div>
-        <div class="ea-inf"><strong id="ea-status-text">Checking...</strong><span id="ea-last-sync">EA connection</span></div>
+    <div class="sb-bot">
+      <div class="ea-status-box">
+        <div class="ea-led" id="ea-led"></div>
+        <div class="ea-info">
+          <strong id="ea-txt">Checking...</strong>
+          <span id="ea-sub">EA connection</span>
+        </div>
       </div>
     </div>
   </nav>
@@ -128,113 +186,117 @@
   <div id="main">
     <header id="topbar">
       <button id="hbtn"><span></span><span></span><span></span></button>
-      <div><div id="tb-title">Daily Reports</div><span id="tb-desc">Latest candle analysis · All symbols</span></div>
-      <div id="tb-right">
+      <div class="tb-info">
+        <div id="tb-pg">Daily Reports</div>
+        <span id="tb-sub">Latest candle analysis · All symbols</span>
+      </div>
+      <div class="tb-right">
         <div id="tb-date" class="tb-date"></div>
-        <button id="notif-btn" class="icon-btn" title="Notifications">🔔</button>
-        <div class="user-chip" id="user-chip"></div>
+        <button id="notif-btn" class="icon-btn">🔔</button>
+        <div id="user-chip" class="user-chip"></div>
         <button id="logout-btn" class="icon-btn" title="Sign out">⎋</button>
       </div>
     </header>
+
     <div id="content">
 
-      <!-- REPORTS -->
+      <!-- REPORTS PAGE -->
       <div class="page active" id="page-reports">
         <div id="date-nav" class="date-nav" style="display:none">
-          <button id="nav-prev-btn" class="date-nav-btn">‹</button>
-          <div class="date-nav-center">
-            <div id="nav-date-display" class="date-nav-label">Latest Report</div>
-            <input type="date" id="date-picker" class="date-picker">
+          <button id="dn-prev" class="dn-btn">‹</button>
+          <div class="dn-mid">
+            <span id="dn-label">Latest Report</span>
+            <input type="date" id="dn-picker" class="dn-picker">
           </div>
-          <button id="nav-next-btn" class="date-nav-btn">›</button>
-          <button id="nav-latest-btn" class="date-nav-latest" style="display:none">↩ Latest</button>
+          <button id="dn-next" class="dn-btn">›</button>
+          <button id="dn-latest" class="dn-latest" style="display:none">↩ Latest</button>
         </div>
-        <div id="reports-loading" class="loading-state"><div class="spinner"></div><p>Loading reports...</p></div>
-        <div id="reports-content" style="display:none"><div id="reports-grid" class="reports-grid"></div></div>
-        <div id="reports-empty" class="empty-state" style="display:none">
-          <div class="empty-icon">◉</div>
+        <div id="rpt-loading" class="state-loading"><div class="spin"></div><p>Loading reports…</p></div>
+        <div id="rpt-grid" class="rpt-grid" style="display:none"></div>
+        <div id="rpt-empty" class="state-empty" style="display:none">
+          <div class="se-icon">◉</div>
           <h3>No report for this date</h3>
-          <p>Reports generate nightly at 22:30 UTC on trading days. Use the arrows to navigate or ask the admin to run jobs manually.</p>
+          <p>Reports generate nightly at 22:30 UTC. Navigate with the arrows or ask the admin to run jobs manually.</p>
         </div>
       </div>
 
-      <!-- CHARTS -->
-      <div class="page" id="page-chart-UK100"><div class="chart-page" data-symbol="UK100"></div></div>
-      <div class="page" id="page-chart-DE30"><div class="chart-page" data-symbol="DE30"></div></div>
-      <div class="page" id="page-chart-XAUUSD"><div class="chart-page" data-symbol="XAUUSD"></div></div>
-      <div class="page" id="page-chart-USOIL"><div class="chart-page" data-symbol="USOIL"></div></div>
+      <!-- CHART PAGES -->
+      <div class="page" id="page-chart-UK100"><div class="chart-host" data-sym="UK100"></div></div>
+      <div class="page" id="page-chart-DE30"><div class="chart-host" data-sym="DE30"></div></div>
+      <div class="page" id="page-chart-XAUUSD"><div class="chart-host" data-sym="XAUUSD"></div></div>
+      <div class="page" id="page-chart-USOIL"><div class="chart-host" data-sym="USOIL"></div></div>
 
       <!-- SETTINGS -->
       <div class="page" id="page-settings">
-        <div class="settings-wrap">
-          <div class="settings-section">
-            <h3>Profile</h3>
-            <p>Update your display name, username, or email.</p>
-            <form id="profile-form">
-              <div class="field"><label>Email</label><input type="email" id="prof-email" autocomplete="email" placeholder="your@email.com"></div>
-              <div class="field-row-2">
-                <div class="field"><label>Username</label><input type="text" id="prof-username" autocomplete="username"></div>
-                <div class="field"><label>Display Name</label><input type="text" id="prof-display"></div>
+        <div class="stg-wrap">
+          <div class="stg-card">
+            <div class="stg-head">Profile</div>
+            <form id="prof-form">
+              <div class="field"><label>Email</label><input type="email" id="pf-email" autocomplete="email"></div>
+              <div class="field-row">
+                <div class="field"><label>Username</label><input type="text" id="pf-user" autocomplete="username"></div>
+                <div class="field"><label>Display Name</label><input type="text" id="pf-name"></div>
               </div>
-              <div id="prof-msg" class="form-msg" style="display:none"></div>
-              <button type="submit" class="btn-primary" style="max-width:200px">Save Profile</button>
+              <div id="pf-msg" class="form-msg" style="display:none"></div>
+              <button type="submit" class="btn-vi" style="max-width:180px">Save Profile</button>
             </form>
           </div>
-          <div class="settings-section">
-            <h3>Change Password</h3>
+          <div class="stg-card">
+            <div class="stg-head">Change Password</div>
             <form id="pw-form">
-              <div class="field"><label>Current Password</label><input type="password" id="pw-current"></div>
+              <div class="field"><label>Current Password</label><input type="password" id="pw-cur"></div>
               <div class="field"><label>New Password</label><input type="password" id="pw-new" placeholder="Min 8 characters"></div>
               <div id="pw-msg" class="form-msg" style="display:none"></div>
-              <button type="submit" class="btn-primary" style="max-width:200px">Change Password</button>
+              <button type="submit" class="btn-vi" style="max-width:180px">Change Password</button>
             </form>
           </div>
-          <div class="settings-section">
-            <h3>Push Notifications</h3>
-            <p>Get notified when daily reports are ready (~22:30 UTC on trading days).</p>
-            <div id="notif-status-box" class="notif-status-box"></div>
-            <button id="notif-toggle-btn" class="btn-primary" style="max-width:240px">Enable Notifications</button>
+          <div class="stg-card">
+            <div class="stg-head">Push Notifications</div>
+            <p class="stg-desc">Get notified when your daily report is ready (~22:30 UTC on trading days).</p>
+            <div id="notif-box" class="notif-box"></div>
+            <button id="notif-toggle" class="btn-vi" style="max-width:220px">Enable Notifications</button>
           </div>
-          <div class="settings-section">
-            <h3>Data Status</h3>
-            <div id="data-status" class="data-status-grid"></div>
+          <div class="stg-card">
+            <div class="stg-head">Data Status</div>
+            <div id="data-status"></div>
           </div>
-          <div class="settings-section">
-            <h3>Install App</h3>
-            <p>Add Kaizoku Reports to your home screen for the best experience.</p>
-            <button id="install-btn" class="btn-secondary" style="display:none;max-width:200px">Install App</button>
-            <p id="install-note" class="install-note" style="display:none"></p>
+          <div class="stg-card">
+            <div class="stg-head">Install App</div>
+            <p class="stg-desc">Add Kaizoku Reports to your home screen.</p>
+            <button id="install-btn" class="btn-outline" style="display:none">Install App</button>
+            <p id="install-note" class="stg-note" style="display:none"></p>
           </div>
         </div>
       </div>
 
       <!-- ADMIN -->
       <div class="page" id="page-admin">
-        <div class="settings-wrap" style="max-width:640px">
-          <div class="settings-section">
-            <h3>User Management</h3>
-            <p>View and manage all registered users. Suspend or restore access, change roles.</p>
-            <div id="user-list"><div class="loading-inline"><div class="spinner-sm"></div></div></div>
+        <div class="stg-wrap" style="max-width:640px">
+          <div class="stg-card">
+            <div class="stg-head">Users</div>
+            <p class="stg-desc">All registered users. New users sign up themselves at the app URL — no invite needed.</p>
+            <div id="user-list"><div class="inline-load"><div class="spin-sm"></div></div></div>
           </div>
-          <div class="settings-section">
-            <h3>EA API Key</h3>
-            <p>This key authenticates your MetaTrader 5 EA. Set it in the EA's <strong>InpApiKey</strong> parameter.</p>
-            <div id="ea-key-display"><div class="loading-inline"><div class="spinner-sm"></div></div></div>
+          <div class="stg-card">
+            <div class="stg-head">EA API Key</div>
+            <p class="stg-desc">Copy this into MetaTrader 5 → EA Inputs → <strong>InpApiKey</strong>.</p>
+            <div id="ea-key-wrap"><div class="inline-load"><div class="spin-sm"></div></div></div>
           </div>
-          <div class="settings-section">
-            <h3>System</h3>
-            <p>Manually trigger classification and report generation. Use this after the EA backfills data for the first time.</p>
-            <button id="run-jobs-btn" class="btn-primary" style="max-width:260px">Run Nightly Jobs Now</button>
+          <div class="stg-card">
+            <div class="stg-head">Run Jobs</div>
+            <p class="stg-desc">Manually trigger report generation. Use this after the EA first backfills data.</p>
+            <button id="run-jobs" class="btn-vi" style="max-width:220px">Run Nightly Jobs Now</button>
             <div id="jobs-msg" class="form-msg" style="display:none;margin-top:10px"></div>
           </div>
         </div>
       </div>
 
-    </div>
-  </div>
-</div>
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app -->
 
 <div id="overlay"></div>
+
 <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
 <script src="/js/charts.js"></script>
 <script src="/js/app.js"></script>
