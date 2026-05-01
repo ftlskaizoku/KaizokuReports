@@ -1,5 +1,11 @@
 node_modules/
 .env
+<<<<<<< HEAD
 .netlify/
 *.log
 .DS_Store
+=======
+*.log
+.DS_Store
+.netlify/
+>>>>>>> 8063827b3b7f4f57abff358a4d5a4b65aeb2d382
