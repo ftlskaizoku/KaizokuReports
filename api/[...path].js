@@ -35,6 +35,16 @@ module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers','Content-Type,Authorization,X-Api-Key,X-Cron-Secret');
   if (req.method==='OPTIONS') return res.status(200).end();
 
+  // Vercel: manually parse body if not already parsed
+  if (req.body === undefined && req.method !== 'GET') {
+    try {
+      const chunks = [];
+      for await (const chunk of req) chunks.push(chunk);
+      const raw = Buffer.concat(chunks).toString('utf8');
+      req.body = raw ? JSON.parse(raw) : {};
+    } catch { req.body = {}; }
+  }
+
   if (!process.env.DATABASE_URL)
     return ok(res, { error:'DATABASE_URL not set', fix:'Vercel → Project Settings → Environment Variables → Add DATABASE_URL from neon.tech' }, 503);
   if (!process.env.JWT_SECRET)
