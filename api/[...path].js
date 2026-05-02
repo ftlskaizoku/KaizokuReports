@@ -42,10 +42,17 @@ module.exports = async function handler(req, res) {
 
   // Parse URL — strip /api prefix, remove trailing slash, handle query string
   const rawUrl  = req.url || '/';
-  const urlPath = rawUrl.split('?')[0].replace(/^\/api/,'').replace(/\/+$/,'') || '/';
+  // Vercel [...path].js: req.url may or may not include /api prefix — strip it either way
+  const urlPath = rawUrl.split('?')[0]
+    .replace(/^\/api/, '')   // strip /api prefix if present
+    .replace(/\/+$/, '')     // strip trailing slashes
+    || '/';
   const method  = req.method;
   const body    = req.body || {};
   const qs      = new URLSearchParams(rawUrl.includes('?') ? rawUrl.split('?')[1] : '');
+  
+  // Debug: log every request so we can see what's being called
+  console.log(`[${method}] ${urlPath} (raw: ${rawUrl})`);
 
   try {
     await ensureDb();
