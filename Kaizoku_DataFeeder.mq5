@@ -23,6 +23,10 @@ string   g_endpoint;
 
 int OnInit()
 {
+   // Reset state on every init (including parameter changes)
+   g_firstRun = true;
+   g_lastSync = 0;
+
    ArrayResize(g_symbols, 4);
    g_symbols[0] = InpSymbol1;
    g_symbols[1] = InpSymbol2;
