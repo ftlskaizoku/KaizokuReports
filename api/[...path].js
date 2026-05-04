@@ -181,6 +181,14 @@ module.exports = async function handler(req, res) {
       return;
     }
 
+    // Bulk backfill: classify ALL candles + generate ALL missing reports
+    if (method==='POST' && urlPath==='/admin/backfill') {
+      const u=auth(tok(req));if(u.role!=='admin')return err(res,'Admin only.',403);
+      ok(res,{message:'Backfill started — this may take a minute.'});
+      setImmediate(()=>runBackfill().catch(console.error));
+      return;
+    }
+
     // ── EA ──
     if (method==='POST' && urlPath==='/ea/push') {
       await eaAuth(req);
@@ -298,6 +306,7 @@ async function runNightlyJobs() {
   console.log('✓ Done —',reports.length,'reports');
 }
 
+// Classify the latest candle only (for nightly job)
 async function classifyLatest(symbol) {
   const res=await query(`SELECT c.*,ca.candle_type,ca.d1_bias,ca.structure_label,ca.id AS aid FROM candles c LEFT JOIN candle_analysis ca ON ca.candle_id=c.id WHERE c.symbol=$1 ORDER BY c.candle_date DESC LIMIT 22`,[symbol]);
   if(!res.rows.length)return;
@@ -311,4 +320,91 @@ async function classifyLatest(symbol) {
     const oc=classifyOutcome(rest[0].d1_bias,rest[0],today);
     await query(`UPDATE candle_analysis SET next_day_direction=$1,next_day_return_pct=$2,outcome_type=$3 WHERE id=$4`,[oc.next_day_direction,oc.next_day_return_pct,oc.outcome_type,rest[0].aid]);
   }
+}
+
+// Classify ALL unclassified candles for a symbol
+async function classifyAll(symbol) {
+  // Get all candles ordered oldest first
+  const allCandles = await query(
+    `SELECT c.*, ca.id AS aid, ca.d1_bias, ca.next_day_direction
+     FROM candles c
+     LEFT JOIN candle_analysis ca ON ca.candle_id = c.id
+     WHERE c.symbol = $1
+     ORDER BY c.candle_date ASC`,
+    [symbol]
+  );
+  if (!allCandles.rows.length) return 0;
+  const rows = allCandles.rows;
+  let classified = 0;
+  for (let i = 0; i < rows.length; i++) {
+    const today = rows[i];
+    const prev  = i > 0 ? rows[i-1] : null;
+    const history = rows.slice(Math.max(0, i-20), i);
+    // Classify if not yet done
+    if (!today.aid) {
+      const analysis = classifyCandle(today, prev, history);
+      await query(
+        `INSERT INTO candle_analysis(candle_id,symbol,candle_date,candle_type,structure_label,body_pct,upper_wick_pct,lower_wick_pct,close_position,range_points,body_points,d1_bias,bias_confidence)
+         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) ON CONFLICT(candle_id) DO NOTHING`,
+        [today.id,symbol,today.candle_date,analysis.candle_type,analysis.structure_label,analysis.body_pct,analysis.upper_wick_pct,analysis.lower_wick_pct,analysis.close_position,analysis.range_points,analysis.body_points,analysis.d1_bias,analysis.bias_confidence]
+      );
+      classified++;
+    }
+    // Fill outcome for previous candle
+    if (prev?.aid && !prev?.next_day_direction) {
+      const oc = classifyOutcome(prev.d1_bias, prev, today);
+      await query(`UPDATE candle_analysis SET next_day_direction=$1,next_day_return_pct=$2,outcome_type=$3 WHERE candle_id=$4`,
+        [oc.next_day_direction, oc.next_day_return_pct, oc.outcome_type, prev.id]);
+    }
+  }
+  console.log(`Classified ${classified} new candles for ${symbol}`);
+  return classified;
+}
+
+// Generate reports for ALL days that have analysis but no report
+async function generateMissingReports(symbol) {
+  const rows = await query(
+    `SELECT c.*, ca.candle_type, ca.structure_label, ca.d1_bias, ca.bias_confidence
+     FROM candles c
+     JOIN candle_analysis ca ON ca.candle_id = c.id
+     WHERE c.symbol = $1
+     AND NOT EXISTS (SELECT 1 FROM daily_reports dr WHERE dr.symbol = c.symbol AND dr.report_date = c.candle_date)
+     ORDER BY c.candle_date ASC`,
+    [symbol]
+  );
+  if (!rows.rows.length) { console.log(`No missing reports for ${symbol}`); return 0; }
+  let generated = 0;
+  for (const row of rows.rows) {
+    try {
+      const rep = await generateReport(symbol, row, {
+        candle_type: row.candle_type, structure_label: row.structure_label,
+        d1_bias: row.d1_bias, bias_confidence: row.bias_confidence
+      });
+      await query(
+        `INSERT INTO daily_reports(symbol,report_date,candle_id,candle_type,bias,bias_confidence,key_levels,report_text,short_summary,generated_at)
+         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW())
+         ON CONFLICT(symbol,report_date) DO NOTHING`,
+        [symbol, row.candle_date, row.id, rep.candle_type, rep.bias, rep.bias_confidence,
+         JSON.stringify(rep.key_levels), rep.report_text, rep.short_summary]
+      );
+      generated++;
+    } catch(e) { console.error(`Report error ${symbol} ${row.candle_date}:`, e.message); }
+  }
+  console.log(`Generated ${generated} missing reports for ${symbol}`);
+  return generated;
+}
+
+// Full backfill: classify everything + generate all missing reports
+async function runBackfill() {
+  console.log('▶ Backfill started');
+  for (const sym of SYMBOLS) {
+    try { await classifyAll(sym); } catch(e) { console.error('ClassifyAll', sym, e.message); }
+  }
+  for (const sym of SYMBOLS) {
+    try { await refreshPatternStats(sym); } catch(e) { console.error('Stats', sym, e.message); }
+  }
+  for (const sym of SYMBOLS) {
+    try { await generateMissingReports(sym); } catch(e) { console.error('Reports', sym, e.message); }
+  }
+  console.log('✓ Backfill complete');
 }
