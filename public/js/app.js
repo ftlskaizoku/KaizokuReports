@@ -417,24 +417,44 @@ const App = (() => {
       bfsBtn.onclick = async () => {
         const statusEl = el('backfill-status');
         if (!statusEl) return;
-        statusEl.innerHTML = '<div class="inline-load"><div class="spin-sm"></div><span style="font-size:12px;color:var(--tx3)">Checking…</span></div>';
+        statusEl.innerHTML = '<div class="inline-load"><div class="spin-sm"></div><span style="font-size:12px;color:var(--tx3)">Checking database…</span></div>';
         try {
-          const rows = await call('/api/admin/backfill-status');
-          statusEl.innerHTML = rows.map(r => `
-            <div class="ds-row" style="margin-bottom:6px;flex-direction:column;align-items:flex-start;gap:4px">
-              <div style="display:flex;align-items:center;gap:10px;width:100%">
+          // Show what symbols are actually in the DB
+          const dbSyms = await call('/api/admin/db-symbols');
+          const status = await call('/api/admin/backfill-status');
+
+          let html = '';
+          // DB symbols section
+          if (dbSyms.length) {
+            html += `<div style="font-family:var(--fm);font-size:9px;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Data in database</div>`;
+            html += dbSyms.map(r => `
+              <div class="ds-row" style="margin-bottom:4px">
                 <span class="ds-sym">${r.symbol}</span>
-                <span class="ds-info">${r.total_candles} candles · ${r.classified} classified · ${r.reports} reports</span>
-              </div>
-              <div style="font-family:var(--fm);font-size:10px;color:var(--tx3)">
-                Candles: ${r.oldest_candle?.split('T')[0]||'—'} → ${r.latest_candle?.split('T')[0]||'—'} &nbsp;|&nbsp;
-                Reports: ${r.oldest_report?.split('T')[0]||'none'} → ${r.latest_report?.split('T')[0]||'none'}
-              </div>
-            </div>`).join('');
+                <span class="ds-info">${r.candles} candles · ${r.from_date?.split('T')[0]||'?'} → ${r.to_date?.split('T')[0]||'?'}</span>
+              </div>`).join('');
+          } else {
+            html += `<div style="color:var(--be);font-size:13px;padding:8px 0">⚠ No candle data in database yet. The EA must push data first.</div>`;
+          }
+
+          if (status.length) {
+            html += `<div style="font-family:var(--fm);font-size:9px;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;margin:12px 0 8px">Reports status</div>`;
+            html += status.map(r => {
+              const pct = r.total_candles > 0 ? Math.round((r.reports/r.total_candles)*100) : 0;
+              const color = pct === 100 ? 'var(--bu)' : pct > 50 ? 'var(--vi3)' : 'var(--be)';
+              return `<div class="ds-row" style="margin-bottom:4px;flex-direction:column;align-items:flex-start;gap:3px">
+                <div style="display:flex;align-items:center;gap:8px;width:100%">
+                  <span class="ds-sym">${r.symbol}</span>
+                  <span style="font-family:var(--fm);font-size:11px;color:${color}">${r.reports}/${r.total_candles} reports (${pct}%)</span>
+                </div>
+                <div style="font-family:var(--fm);font-size:10px;color:var(--tx3)">
+                  Reports: ${r.oldest_report?.split('T')[0]||'none'} → ${r.latest_report?.split('T')[0]||'none'}
+                </div>
+              </div>`;
+            }).join('');
+          }
+          statusEl.innerHTML = html;
         } catch(e) { statusEl.innerHTML = `<p style="color:var(--be);font-size:13px">${e.message}</p>`; }
       };
-      // Auto-check status when admin panel loads
-      bfsBtn.click();
     }
   }
 
