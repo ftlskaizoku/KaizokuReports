@@ -389,6 +389,53 @@ const App = (() => {
         finally{setTimeout(()=>{rj.disabled=false;rj.textContent='Run Nightly Jobs Now';},4000);}
       };
     }
+    const bf = el('backfill-btn');
+    if (bf && !bf._bound) { bf._bound=true;
+      bf.onclick = async () => {
+        if (!confirm('This will classify all historical candles and generate a report for every trading day. Continue?')) return;
+        bf.disabled=true;
+        const statusEl = el('backfill-status');
+        const symbols = ['UK100','DE30','XAUUSD','USOIL'];
+        let totalReports = 0;
+        for (const sym of symbols) {
+          bf.textContent = `Processing ${sym}…`;
+          if (statusEl) statusEl.innerHTML = `<div class="inline-load"><div class="spin-sm"></div><span style="color:var(--tx2);font-size:13px">Processing ${sym}…</span></div>`;
+          try {
+            const res = await call('/api/admin/backfill','POST',{symbol:sym});
+            totalReports += res.generated || 0;
+            if (statusEl) statusEl.innerHTML += `<div style="font-family:var(--fm);font-size:12px;color:var(--bu);padding:4px 0">✓ ${sym}: ${res.classified} classified, ${res.generated} reports generated</div>`;
+          } catch(e) {
+            if (statusEl) statusEl.innerHTML += `<div style="font-family:var(--fm);font-size:12px;color:var(--be);padding:4px 0">✗ ${sym}: ${e.message}</div>`;
+          }
+        }
+        bf.disabled=false; bf.textContent='Generate All Reports';
+        msg('backfill-msg','success',`✓ Done! ${totalReports} total reports generated. Go to Daily Reports and use ‹ › to navigate all dates.`);
+      };
+    }
+    const bfsBtn = el('backfill-status-btn');
+    if (bfsBtn && !bfsBtn._bound) { bfsBtn._bound=true;
+      bfsBtn.onclick = async () => {
+        const statusEl = el('backfill-status');
+        if (!statusEl) return;
+        statusEl.innerHTML = '<div class="inline-load"><div class="spin-sm"></div><span style="font-size:12px;color:var(--tx3)">Checking…</span></div>';
+        try {
+          const rows = await call('/api/admin/backfill-status');
+          statusEl.innerHTML = rows.map(r => `
+            <div class="ds-row" style="margin-bottom:6px;flex-direction:column;align-items:flex-start;gap:4px">
+              <div style="display:flex;align-items:center;gap:10px;width:100%">
+                <span class="ds-sym">${r.symbol}</span>
+                <span class="ds-info">${r.total_candles} candles · ${r.classified} classified · ${r.reports} reports</span>
+              </div>
+              <div style="font-family:var(--fm);font-size:10px;color:var(--tx3)">
+                Candles: ${r.oldest_candle?.split('T')[0]||'—'} → ${r.latest_candle?.split('T')[0]||'—'} &nbsp;|&nbsp;
+                Reports: ${r.oldest_report?.split('T')[0]||'none'} → ${r.latest_report?.split('T')[0]||'none'}
+              </div>
+            </div>`).join('');
+        } catch(e) { statusEl.innerHTML = `<p style="color:var(--be);font-size:13px">${e.message}</p>`; }
+      };
+      // Auto-check status when admin panel loads
+      bfsBtn.click();
+    }
   }
 
   async function loadDataStatus() {

@@ -181,12 +181,57 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    // Bulk backfill: classify ALL candles + generate ALL missing reports
+    // Backfill ONE symbol at a time (avoids Vercel 10s timeout)
     if (method==='POST' && urlPath==='/admin/backfill') {
       const u=auth(tok(req));if(u.role!=='admin')return err(res,'Admin only.',403);
-      ok(res,{message:'Backfill started — this may take a minute.'});
-      setImmediate(()=>runBackfill().catch(console.error));
-      return;
+      const sym = body.symbol;
+      if (!sym || !SYMBOLS.includes(sym)) return err(res,'Invalid symbol. Send { symbol: "UK100" }');
+      try {
+        const classified = await classifyAll(sym);
+        await refreshPatternStats(sym).catch(()=>{});
+        const generated = await generateMissingReports(sym);
+        return ok(res,{ symbol:sym, classified, generated, message:`${sym}: ${classified} classified, ${generated} reports generated` });
+      } catch(e) { return err(res, e.message, 500); }
+    }
+
+    // Get backfill status per symbol
+    if (method==='GET' && urlPath==='/admin/backfill-status') {
+      const u=auth(tok(req));if(u.role!=='admin')return err(res,'Admin only.',403);
+      const rows = await query(`
+        SELECT 
+          c.symbol,
+          COUNT(DISTINCT c.id) as total_candles,
+          COUNT(DISTINCT ca.id) as classified,
+          COUNT(DISTINCT dr.id) as reports,
+          MIN(c.candle_date) as oldest_candle,
+          MAX(c.candle_date) as latest_candle,
+          MIN(dr.report_date) as oldest_report,
+          MAX(dr.report_date) as latest_report
+        FROM candles c
+        LEFT JOIN candle_analysis ca ON ca.candle_id = c.id
+        LEFT JOIN daily_reports dr ON dr.symbol = c.symbol AND dr.report_date = c.candle_date
+        GROUP BY c.symbol ORDER BY c.symbol
+      `);
+      return ok(res, rows.rows);
+    }
+
+    // Status: see what's in the DB per symbol
+    if (method==='GET' && urlPath==='/admin/status') {
+      const u=auth(tok(req));if(u.role!=='admin')return err(res,'Admin only.',403);
+      const r=await query(`
+        SELECT
+          c.symbol,
+          COUNT(DISTINCT c.id) AS total_candles,
+          MIN(c.candle_date) AS oldest_candle,
+          MAX(c.candle_date) AS latest_candle,
+          COUNT(DISTINCT ca.id) AS classified,
+          COUNT(DISTINCT dr.id) AS reports
+        FROM candles c
+        LEFT JOIN candle_analysis ca ON ca.candle_id = c.id
+        LEFT JOIN daily_reports dr ON dr.symbol = c.symbol AND dr.report_date = c.candle_date
+        GROUP BY c.symbol ORDER BY c.symbol
+      `);
+      return ok(res, r.rows);
     }
 
     // ── EA ──

@@ -284,9 +284,19 @@
           </div>
           <div class="stg-card">
             <div class="stg-head">Run Jobs</div>
-            <p class="stg-desc">Manually trigger report generation. Use this after the EA first backfills data.</p>
+            <p class="stg-desc">Manually trigger tonight's report generation for the latest candle.</p>
             <button id="run-jobs" class="btn-vi" style="max-width:220px">Run Nightly Jobs Now</button>
             <div id="jobs-msg" class="form-msg" style="display:none;margin-top:10px"></div>
+          </div>
+          <div class="stg-card">
+            <div class="stg-head">Backfill Historical Reports</div>
+            <p class="stg-desc">Classify all candles and generate a report for every trading day. Run once after the EA finishes its initial data push. Processes one symbol at a time.</p>
+            <div id="backfill-status" style="margin-bottom:14px"></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button id="backfill-btn" class="btn-vi" style="max-width:260px">Generate All Reports</button>
+              <button id="backfill-status-btn" class="btn-outline" style="max-width:160px">Check Status</button>
+            </div>
+            <div id="backfill-msg" class="form-msg" style="display:none;margin-top:10px"></div>
           </div>
         </div>
       </div>
