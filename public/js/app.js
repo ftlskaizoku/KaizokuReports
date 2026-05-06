@@ -219,11 +219,18 @@ const App = (() => {
 
   async function loadDates() {
     try {
-      const r = await call('/api/reports/UK100?limit=500');
-      if (r?.length) {
-        allDates = r.map(x => x.report_date?.split('T')[0]).filter(Boolean).sort();
+      // Use candle dates (not report dates) so ALL days with data are navigable
+      const r = await call('/api/candles/UK100?limit=5000');
+      if (r?.candles?.length) {
+        allDates = r.candles.map(x => x.date?.split('T')[0]).filter(Boolean).sort();
         const pk = el('dn-picker');
         if (pk && allDates.length) { pk.min = allDates[0]; pk.max = allDates[allDates.length-1]; }
+      } else {
+        // Fallback to report dates
+        const rep = await call('/api/reports/UK100?limit=5000');
+        if (rep?.length) {
+          allDates = rep.map(x => x.report_date?.split('T')[0]).filter(Boolean).sort();
+        }
       }
     } catch {}
   }

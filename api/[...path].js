@@ -247,12 +247,22 @@ module.exports = async function handler(req, res) {
       const candles=Array.isArray(body)?body:[body];
       if(!candles.length)return err(res,'Empty.');
       let ins=0,upd=0,skip=0;
+      const updatedSymbols = new Set();
       for(const c of candles){
         const sym=normSym(c.symbol);
         if(!sym||!c.date||isNaN(+c.open)||isNaN(+c.high)||isNaN(+c.low)||isNaN(+c.close)){skip++;continue;}
         const r=await query(`INSERT INTO candles(symbol,candle_date,open,high,low,close,volume) VALUES($1,$2::date,$3,$4,$5,$6,$7) ON CONFLICT(symbol,candle_date) DO UPDATE SET open=EXCLUDED.open,high=EXCLUDED.high,low=EXCLUDED.low,close=EXCLUDED.close,volume=EXCLUDED.volume,updated_at=NOW() RETURNING(xmax=0)AS ins`,
           [sym,c.date,+c.open,+c.high,+c.low,+c.close,+(c.volume||0)]).catch(()=>null);
-        if(r?.rows[0]?.ins)ins++;else if(r)upd++;else skip++;
+        if(r?.rows[0]?.ins){ins++;updatedSymbols.add(sym);}else if(r)upd++;else skip++;
+      }
+      // Auto-classify and generate reports for any symbol that got new candles
+      if(updatedSymbols.size > 0){
+        setImmediate(async()=>{
+          for(const sym of updatedSymbols){
+            try{await classifyLatest(sym);}catch(e){console.error('Auto-classify',sym,e.message);}
+            try{await autoGenerateLatestReport(sym);}catch(e){console.error('Auto-report',sym,e.message);}
+          }
+        });
       }
       return ok(res,{inserted:ins,updated:upd,skipped:skip});
     }
@@ -264,7 +274,7 @@ module.exports = async function handler(req, res) {
     }
 
     // ── CANDLES ──
-    if (method==='GET' && urlPath==='/candles/') {
+    if (method==='GET' && (urlPath==='/candles' || urlPath==='/candles/')) {
       auth(tok(req));
       const r=await query(`SELECT c.symbol,COUNT(*)total_candles,MIN(c.candle_date)from_date,MAX(c.candle_date)to_date,c2.close latest_close,ca.d1_bias latest_bias FROM candles c LEFT JOIN candles c2 ON c2.symbol=c.symbol AND c2.candle_date=(SELECT MAX(candle_date)FROM candles WHERE symbol=c.symbol) LEFT JOIN candle_analysis ca ON ca.candle_id=c2.id GROUP BY c.symbol,c2.close,ca.d1_bias ORDER BY c.symbol`);
       return ok(res,r.rows);
@@ -287,15 +297,29 @@ module.exports = async function handler(req, res) {
     if (method==='GET' && urlPath==='/reports/latest') {
       auth(tok(req));
       const r=await query(`SELECT r.*,c.open,c.high,c.low,c.close,ca.structure_label FROM daily_reports r JOIN candles c ON c.id=r.candle_id LEFT JOIN candle_analysis ca ON ca.candle_id=c.id WHERE r.report_date=(SELECT MAX(report_date)FROM daily_reports)ORDER BY r.symbol`);
-      return ok(res,r.rows);
+      if(r.rows.length) return ok(res,r.rows);
+      // No reports at all — auto-generate for the latest candle date
+      const latestDate = await query(`SELECT MAX(candle_date) AS d FROM candles`);
+      if(!latestDate.rows[0]?.d) return ok(res,[]);
+      const date = latestDate.rows[0].d.toISOString().split('T')[0];
+      const reports = [];
+      for(const sym of SYMBOLS){
+        const rep = await generateReportOnDemand(sym, date);
+        if(rep) reports.push(rep);
+      }
+      return ok(res, reports);
     }
 
     const rsdMatch=urlPath.match(/^\/reports\/([A-Z0-9]+)\/(\d{4}-\d{2}-\d{2})$/);
     if (method==='GET' && rsdMatch) {
       auth(tok(req));
-      const r=await query(`SELECT r.*,c.open,c.high,c.low,c.close,ca.structure_label FROM daily_reports r JOIN candles c ON c.id=r.candle_id LEFT JOIN candle_analysis ca ON ca.candle_id=c.id WHERE r.symbol=$1 AND r.report_date=$2::date`,[rsdMatch[1],rsdMatch[2]]);
-      if(!r.rows.length)return err(res,'Report not found.',404);
-      return ok(res,r.rows[0]);
+      const sym=rsdMatch[1], date=rsdMatch[2];
+      const r=await query(`SELECT r.*,c.open,c.high,c.low,c.close,ca.structure_label FROM daily_reports r JOIN candles c ON c.id=r.candle_id LEFT JOIN candle_analysis ca ON ca.candle_id=c.id WHERE r.symbol=$1 AND r.report_date=$2::date`,[sym,date]);
+      if(r.rows.length) return ok(res,r.rows[0]);
+      // No report — try to auto-generate it on demand
+      const rep = await generateReportOnDemand(sym, date);
+      if(rep) return ok(res,rep);
+      return err(res,'Report not found.',404);
     }
 
     const rsMatch=urlPath.match(/^\/reports\/([A-Z0-9]+)$/);
@@ -336,6 +360,90 @@ module.exports = async function handler(req, res) {
     return err(res,'Server error.',500);
   }
 };
+
+
+// ── ON-DEMAND REPORT GENERATION ──────────────────────────────────────
+// Called when user browses to a date — generates report if candle exists but no report
+async function generateReportOnDemand(symbol, date) {
+  try {
+    // Check candle exists
+    const candle = await query(
+      `SELECT c.*, ca.id AS aid, ca.candle_type, ca.structure_label, ca.d1_bias, ca.bias_confidence
+       FROM candles c
+       LEFT JOIN candle_analysis ca ON ca.candle_id = c.id
+       WHERE c.symbol = $1 AND c.candle_date = $2::date`, [symbol, date]
+    );
+    if (!candle.rows.length) return null;
+    const row = candle.rows[0];
+
+    // Classify if needed
+    if (!row.aid) {
+      await classifyLatest(symbol);
+      // Re-fetch with analysis
+      const updated = await query(
+        `SELECT c.*, ca.candle_type, ca.structure_label, ca.d1_bias, ca.bias_confidence
+         FROM candles c
+         JOIN candle_analysis ca ON ca.candle_id = c.id
+         WHERE c.symbol = $1 AND c.candle_date = $2::date`, [symbol, date]
+      );
+      if (!updated.rows.length) return null;
+      Object.assign(row, updated.rows[0]);
+    }
+    if (!row.candle_type) return null;
+
+    // Generate report
+    const statsMap = await fetchStatsMap(symbol);
+    const rep = buildReport(symbol, row, {
+      candle_type: row.candle_type, structure_label: row.structure_label,
+      d1_bias: row.d1_bias, bias_confidence: row.bias_confidence
+    }, statsMap);
+
+    // Save to DB
+    await query(
+      `INSERT INTO daily_reports(symbol,report_date,candle_id,candle_type,bias,bias_confidence,key_levels,report_text,short_summary,generated_at)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW())
+       ON CONFLICT(symbol,report_date) DO UPDATE SET
+         candle_type=$4,bias=$5,bias_confidence=$6,key_levels=$7,report_text=$8,short_summary=$9,generated_at=NOW()
+       RETURNING *`,
+      [symbol, date, row.id, rep.candle_type, rep.bias, rep.bias_confidence,
+       JSON.stringify(rep.key_levels), rep.report_text, rep.short_summary]
+    );
+
+    // Return in same format as DB query
+    return { ...rep, report_date: date, open: row.open, high: row.high, low: row.low, close: row.close,
+             structure_label: row.structure_label, generated_at: new Date().toISOString() };
+  } catch(e) {
+    console.error(`On-demand report error ${symbol} ${date}:`, e.message);
+    return null;
+  }
+}
+
+// Auto-generate latest report after EA pushes new data
+async function autoGenerateLatestReport(symbol) {
+  const r = await query(
+    `SELECT c.*, ca.candle_type, ca.structure_label, ca.d1_bias, ca.bias_confidence
+     FROM candles c
+     JOIN candle_analysis ca ON ca.candle_id = c.id
+     WHERE c.symbol = $1 ORDER BY c.candle_date DESC LIMIT 1`, [symbol]
+  );
+  if (!r.rows.length) return;
+  const row = r.rows[0];
+  const date = row.candle_date.toISOString ? row.candle_date.toISOString().split('T')[0] : String(row.candle_date).split('T')[0];
+  const statsMap = await fetchStatsMap(symbol);
+  const rep = buildReport(symbol, row, {
+    candle_type: row.candle_type, structure_label: row.structure_label,
+    d1_bias: row.d1_bias, bias_confidence: row.bias_confidence
+  }, statsMap);
+  await query(
+    `INSERT INTO daily_reports(symbol,report_date,candle_id,candle_type,bias,bias_confidence,key_levels,report_text,short_summary,generated_at)
+     VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW())
+     ON CONFLICT(symbol,report_date) DO UPDATE SET
+       candle_type=$4,bias=$5,bias_confidence=$6,key_levels=$7,report_text=$8,short_summary=$9,generated_at=NOW()`,
+    [symbol, date, row.id, rep.candle_type, rep.bias, rep.bias_confidence,
+     JSON.stringify(rep.key_levels), rep.report_text, rep.short_summary]
+  );
+  console.log(`Auto-generated report for ${symbol} ${date}`);
+}
 
 // ── NIGHTLY JOBS ──
 async function runNightlyJobs() {
