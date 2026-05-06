@@ -374,19 +374,22 @@ async function classifyLatest(symbol) {
   }
 }
 
-// Classify ALL unclassified candles for a symbol using batch inserts
+// Classify ALL unclassified candles for a symbol — FAST: 2 DB calls total
 async function classifyAll(symbol) {
+  // 1 query to get everything
   const allCandles = await query(
-    `SELECT c.*, ca.id AS aid, ca.d1_bias, ca.next_day_direction
-     FROM candles c LEFT JOIN candle_analysis ca ON ca.candle_id = c.id
+    `SELECT c.id, c.candle_date, c.open, c.high, c.low, c.close,
+            ca.id AS aid, ca.d1_bias, ca.next_day_direction
+     FROM candles c
+     LEFT JOIN candle_analysis ca ON ca.candle_id = c.id
      WHERE c.symbol = $1 ORDER BY c.candle_date ASC`, [symbol]
   );
   if (!allCandles.rows.length) return 0;
   const rows = allCandles.rows;
 
-  // Build list of all analyses to insert
+  // Compute all classifications in memory (pure JS, no DB)
+  const analysisMap = {}; // candle_id -> analysis result
   const toInsert = [];
-  const outcomeUpdates = [];
 
   for (let i = 0; i < rows.length; i++) {
     const today = rows[i];
@@ -394,84 +397,120 @@ async function classifyAll(symbol) {
     const history = rows.slice(Math.max(0, i-20), i);
     if (!today.aid) {
       const a = classifyCandle(today, prev, history);
+      analysisMap[today.id] = a;
       toInsert.push([today.id, symbol, today.candle_date, a.candle_type, a.structure_label,
         a.body_pct, a.upper_wick_pct, a.lower_wick_pct, a.close_position,
         a.range_points, a.body_points, a.d1_bias, a.bias_confidence]);
     }
-    if (prev && !prev.next_day_direction) {
-      const prevBias = prev.d1_bias || (prev.aid ? null : null);
-      if (prevBias) {
-        const oc = classifyOutcome(prevBias, prev, today);
-        outcomeUpdates.push([oc.next_day_direction, oc.next_day_return_pct, oc.outcome_type, prev.id]);
+  }
+
+  // 1 batch INSERT for all classifications (100 at a time)
+  const BATCH = 100;
+  for (let b = 0; b < toInsert.length; b += BATCH) {
+    const chunk = toInsert.slice(b, b + BATCH);
+    const vals = chunk.map((_, ri) => {
+      const o = ri * 13;
+      return `($${o+1},$${o+2},$${o+3},$${o+4},$${o+5},$${o+6},$${o+7},$${o+8},$${o+9},$${o+10},$${o+11},$${o+12},$${o+13})`;
+    }).join(',');
+    await query(
+      `INSERT INTO candle_analysis(candle_id,symbol,candle_date,candle_type,structure_label,body_pct,upper_wick_pct,lower_wick_pct,close_position,range_points,body_points,d1_bias,bias_confidence)
+       VALUES ${vals} ON CONFLICT(candle_id) DO NOTHING`, chunk.flat()
+    ).catch(e => console.error('Batch insert error:', e.message));
+  }
+
+  // Batch outcome updates using unnest (1 query for ALL updates)
+  const needsOutcome = rows.filter((r, i) => {
+    const next = rows[i+1];
+    return next && !r.next_day_direction;
+  });
+  if (needsOutcome.length > 0) {
+    // Build arrays for unnest
+    const ids=[], dirs=[], rets=[], types=[];
+    for (let i = 0; i < rows.length - 1; i++) {
+      const prev = rows[i], today = rows[i+1];
+      if (!prev.next_day_direction) {
+        const prevBias = prev.d1_bias || (analysisMap[prev.id]?.d1_bias);
+        if (prevBias) {
+          const oc = classifyOutcome(prevBias, prev, today);
+          ids.push(prev.id);
+          dirs.push(oc.next_day_direction);
+          rets.push(oc.next_day_return_pct);
+          types.push(oc.outcome_type);
+        }
       }
+    }
+    if (ids.length > 0) {
+      await query(
+        `UPDATE candle_analysis ca SET
+           next_day_direction = u.dir,
+           next_day_return_pct = u.ret::numeric,
+           outcome_type = u.otype
+         FROM (SELECT unnest($1::int[]) AS cid, unnest($2::text[]) AS dir,
+                      unnest($3::text[]) AS ret, unnest($4::text[]) AS otype) AS u
+         WHERE ca.candle_id = u.cid`,
+        [ids, dirs, rets.map(String), types]
+      ).catch(e => console.error('Outcome update error:', e.message));
     }
   }
 
-  // Batch insert classifications (50 at a time)
-  const BATCH = 50;
-  for (let b = 0; b < toInsert.length; b += BATCH) {
-    const chunk = toInsert.slice(b, b + BATCH);
-    if (!chunk.length) continue;
-    const vals = chunk.map((row, ri) => {
-      const base = ri * 13;
-      return `($${base+1},$${base+2},$${base+3},$${base+4},$${base+5},$${base+6},$${base+7},$${base+8},$${base+9},$${base+10},$${base+11},$${base+12},$${base+13})`;
-    }).join(',');
-    const flat = chunk.flat();
-    await query(
-      `INSERT INTO candle_analysis(candle_id,symbol,candle_date,candle_type,structure_label,body_pct,upper_wick_pct,lower_wick_pct,close_position,range_points,body_points,d1_bias,bias_confidence)
-       VALUES ${vals} ON CONFLICT(candle_id) DO NOTHING`, flat
-    ).catch(e => console.error('Batch classify error:', e.message));
-  }
-
-  // Batch outcome updates
-  for (const [dir, ret, otype, cid] of outcomeUpdates) {
-    await query(`UPDATE candle_analysis SET next_day_direction=$1,next_day_return_pct=$2,outcome_type=$3 WHERE candle_id=$4`,
-      [dir, ret, otype, cid]).catch(()=>{});
-  }
-
-  console.log(`Classified ${toInsert.length} candles for ${symbol}`);
+  console.log(`Classified ${toInsert.length} new candles for ${symbol}`);
   return toInsert.length;
 }
 
-// Generate reports for ALL days that have analysis but no report (batch mode)
+// Generate ALL missing reports — FAST: fetches stats ONCE, builds in memory, 1 batch insert
 async function generateMissingReports(symbol) {
-  const rows = await query(
-    `SELECT c.*, ca.candle_type, ca.structure_label, ca.d1_bias, ca.bias_confidence
+  // Get all candles that need reports
+  const result = await query(
+    `SELECT c.id, c.candle_date, c.open, c.high, c.low, c.close,
+            ca.candle_type, ca.structure_label, ca.d1_bias, ca.bias_confidence
      FROM candles c
      JOIN candle_analysis ca ON ca.candle_id = c.id
      WHERE c.symbol = $1
-     AND NOT EXISTS (SELECT 1 FROM daily_reports dr WHERE dr.symbol = c.symbol AND dr.report_date = c.candle_date)
-     ORDER BY c.candle_date ASC`,
-    [symbol]
+     AND NOT EXISTS (
+       SELECT 1 FROM daily_reports dr
+       WHERE dr.symbol = c.symbol AND dr.report_date = c.candle_date
+     )
+     ORDER BY c.candle_date ASC`, [symbol]
   );
-  if (!rows.rows.length) { console.log(`No missing reports for ${symbol}`); return 0; }
+  if (!result.rows.length) { console.log(`No missing reports for ${symbol}`); return 0; }
 
-  // Build all report data first (no DB calls)
+  // Fetch stats ONCE for the whole symbol — not per candle!
+  const statsMap = await fetchStatsMap(symbol);
+
+  // Build ALL reports in pure memory (zero DB calls per report)
   const toInsert = [];
-  for (const row of rows.rows) {
+  for (const row of result.rows) {
     try {
-      const rep = await generateReport(symbol, row, {
+      const rep = buildReport(symbol, row, {
         candle_type: row.candle_type, structure_label: row.structure_label,
         d1_bias: row.d1_bias, bias_confidence: row.bias_confidence
-      });
-      toInsert.push([symbol, row.candle_date, row.id, rep.candle_type, rep.bias,
-        rep.bias_confidence, JSON.stringify(rep.key_levels), rep.report_text, rep.short_summary]);
+      }, statsMap);
+      toInsert.push([
+        symbol, row.candle_date, row.id, rep.candle_type, rep.bias,
+        rep.bias_confidence, JSON.stringify(rep.key_levels),
+        rep.report_text, rep.short_summary
+      ]);
     } catch(e) { console.error(`Report build error ${symbol} ${row.candle_date}:`, e.message); }
   }
 
-  // Batch insert (10 at a time — report_text can be large)
-  const BATCH = 10;
+  // Insert in batches of 20
+  const BATCH = 20;
   let generated = 0;
   for (let b = 0; b < toInsert.length; b += BATCH) {
     const chunk = toInsert.slice(b, b + BATCH);
-    for (const row of chunk) {
-      await query(
-        `INSERT INTO daily_reports(symbol,report_date,candle_id,candle_type,bias,bias_confidence,key_levels,report_text,short_summary,generated_at)
-         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW()) ON CONFLICT(symbol,report_date) DO NOTHING`, row
-      ).catch(e => console.error('Report insert error:', e.message));
-      generated++;
-    }
+    // Build multi-row INSERT
+    const vals = chunk.map((_, ri) => {
+      const o = ri * 9;
+      return `($${o+1},$${o+2},$${o+3},$${o+4},$${o+5},$${o+6},$${o+7},$${o+8},$${o+9},NOW())`;
+    }).join(',');
+    await query(
+      `INSERT INTO daily_reports(symbol,report_date,candle_id,candle_type,bias,bias_confidence,key_levels,report_text,short_summary,generated_at)
+       VALUES ${vals} ON CONFLICT(symbol,report_date) DO NOTHING`,
+      chunk.flat()
+    ).catch(e => console.error('Reports batch insert error:', e.message));
+    generated += chunk.length;
   }
+
   console.log(`Generated ${generated} reports for ${symbol}`);
   return generated;
 }
